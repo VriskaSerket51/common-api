@@ -37,9 +37,7 @@ export default class App {
         this.expressApp.use(helmet());
         this.expressApp.use(cors());
         this.expressApp.use(express.json());
-        middlewares.forEach((middleware) => {
-            this.expressApp.use(middleware);
-        });
+        this.expressApp.use(...middlewares);
     }
 
     initRouters(routerDir: string, routerMiddleware: RouterMiddleware) {
@@ -54,8 +52,6 @@ export default class App {
             throw new HttpException(404);
         });
         this.expressApp.use(defaultErrorHandler);
-        errorHandlers.forEach((errorHandler) => {
-            this.expressApp.use(errorHandler);
-        });
+        this.expressApp.use(...errorHandlers);
     }
 }
