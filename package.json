@@ -1,5 +1,5 @@
 {
-    "name": "simple-backend",
+    "name": "common-api-ts",
     "version": "1.0.0",
     "description": "",
     "main": "dist/index.js",
@@ -10,7 +10,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/VriskaSerket51/simple-backend.git"
+        "url": "git+https://github.com/VriskaSerket51/common-api-ts.git"
     },
     "keywords": [
         "api",
@@ -23,9 +23,9 @@
     "author": "VriskaSerket51",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/VriskaSerket51/simple-backend/issues"
+        "url": "https://github.com/VriskaSerket51/common-api-ts/issues"
     },
-    "homepage": "https://github.com/VriskaSerket51/simple-backend#readme",
+    "homepage": "https://github.com/VriskaSerket51/common-api-ts#readme",
     "dependencies": {
         "cors": "^2.8.5",
         "express": "^4.18.2",
