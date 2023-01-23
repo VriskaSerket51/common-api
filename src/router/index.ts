@@ -1,7 +1,6 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { RouterMiddleware } from "../middlewares";
 import { readAllFiles } from "../utils";
-import { RouterBase } from "./RouterBase";
 
 export const createRouterByFiles = (
     dirName: string,
@@ -38,3 +37,22 @@ export const createRouterByFiles = (
 
     return defaultRouter;
 };
+
+export interface ModelBase {
+    method: "get" | "post" | "put" | "patch" | "delete";
+    path: string;
+    authType?: "access" | "refresh" | "optional";
+    permission?: number;
+    controller: (req: Request, res: Response) => any;
+}
+
+export class RouterBase {
+    path: string = "";
+    models: ModelBase[] = [];
+
+    constructor() {}
+
+    setPath(path: string) {
+        this.path += path;
+    }
+}
