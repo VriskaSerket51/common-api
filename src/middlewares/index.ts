@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { ModelBase } from "../router/RouterBase";
+import { ModelBase } from "../router";
 import {
     verifyAccessTokenMiddleware,
     verifyRefreshTokenMiddleware,
