@@ -35,12 +35,6 @@ export default class App {
 
     initMiddlewares(middlewares: Middleware[]) {
         this.expressApp.use(helmet());
-        this.expressApp.use(
-            cors({
-                origin: "*",
-                credentials: true,
-            })
-        );
         this.expressApp.use(express.json());
         this.expressApp.use(...middlewares);
     }
