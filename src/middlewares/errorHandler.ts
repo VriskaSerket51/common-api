@@ -5,7 +5,7 @@ import {
     MySqlException,
     ResponseException,
 } from "../exceptions";
-import { logger } from "../utils/Logger";
+import { logger } from "../logger";
 
 const defaultErrorHandler = (
     error: Exception,

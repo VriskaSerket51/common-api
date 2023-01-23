@@ -3,7 +3,7 @@ import { Response, Request, NextFunction } from "express";
 import config from "../config";
 import { HttpException, ResponseException } from "../exceptions";
 import { v4 as uuid } from "uuid";
-import { logger } from "../utils/Logger";
+import { logger } from "../logger";
 
 export const createAccessToken = (payload: any) => {
     payload.type = "access";

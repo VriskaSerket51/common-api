@@ -1,7 +1,7 @@
 import * as mysql from "mysql2/promise";
 import config from "../config";
 import { MySqlException } from "../exceptions";
-import { logger } from "../utils/Logger";
+import { logger } from "../logger";
 
 export const connection = async () => {
     try {

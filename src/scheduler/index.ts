@@ -1,5 +1,5 @@
 import scheduler from "node-schedule";
-import { logger } from "../utils/Logger";
+import { logger } from "../logger";
 
 export interface Schedule {
     name: string;
