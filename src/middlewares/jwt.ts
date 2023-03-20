@@ -54,7 +54,7 @@ export const verifyAccessTokenMiddleware = (
     });
 };
 
-export const createRefreshoken = (payload: any) => {
+export const createRefreshToken = (payload: any) => {
     payload.type = "refresh";
     return jwt.sign(payload, config.jwtSecret, {
         algorithm: "HS256",
