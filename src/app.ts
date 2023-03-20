@@ -37,7 +37,7 @@ export default class App {
         this.expressApp.use(helmet());
         this.expressApp.use(cors());
         this.expressApp.use(express.json());
-        this.expressApp.use(express.urlencoded());
+        this.expressApp.use(express.urlencoded({ extended: true }));
         this.expressApp.use(...middlewares);
     }
 
