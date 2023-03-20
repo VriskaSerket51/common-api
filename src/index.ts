@@ -7,4 +7,6 @@ export * from "./router";
 export * from "./scheduler";
 export * from "./utils";
 
+export { Request, Response, NextFunction } from "express";
+
 export { default as App } from "./app";
