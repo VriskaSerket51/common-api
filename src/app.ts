@@ -38,7 +38,9 @@ export default class App {
         this.expressApp.use(cors());
         this.expressApp.use(express.json());
         this.expressApp.use(express.urlencoded({ extended: true }));
-        this.expressApp.use(...middlewares);
+        if (middlewares.length > 0) {
+            this.expressApp.use(...middlewares);
+        }
     }
 
     initRouters(routerDir: string, routerMiddleware: RouterMiddleware) {
@@ -53,6 +55,8 @@ export default class App {
             throw new HttpException(404);
         });
         this.expressApp.use(defaultErrorHandler);
-        this.expressApp.use(...errorHandlers);
+        if (errorHandlers.length > 0) {
+            this.expressApp.use(...errorHandlers);
+        }
     }
 }
