@@ -5,13 +5,21 @@ import { HttpException, ResponseException } from "../exceptions";
 import { v4 as uuid } from "uuid";
 import { logger } from "../logger";
 
-export const createAccessToken = (payload: any) => {
+export const createAccessToken = (payload: any, options?: jwt.SignOptions) => {
     payload.type = "access";
-    return jwt.sign(payload, config.jwtSecret, {
-        algorithm: "HS256",
-        expiresIn: "10m",
-        jwtid: uuid(),
-    });
+    if (!options) {
+        return jwt.sign(payload, config.jwtSecret);
+    }
+    if (!options.algorithm) {
+        options.algorithm = "HS256";
+    }
+    if (!options.expiresIn) {
+        options.expiresIn = "10m";
+    }
+    if (!options.jwtid) {
+        options.jwtid = uuid();
+    }
+    return jwt.sign(payload, config.jwtSecret, options);
 };
 
 export const verifyJwt = (
@@ -39,12 +47,12 @@ export const verifyAccessTokenMiddleware = (
     const jwtToken = bearer.split("Bearer ")[1];
     verifyJwt(jwtToken, (error, decoded) => {
         if (error?.message === "jwt expired") {
-            throw new ResponseException(-1972, "토큰이 만료됐습니다.");
+            throw new ResponseException(-100, "토큰이 만료됐습니다.");
         } else if (
             error?.message === "invalid token" ||
             (decoded as any).type !== "access"
         ) {
-            throw new ResponseException(-1973, "토큰이 유효하지 않습니다.");
+            throw new ResponseException(-101, "토큰이 유효하지 않습니다.");
         } else if (error) {
             logger.error(error);
             throw new HttpException(500);
@@ -54,13 +62,21 @@ export const verifyAccessTokenMiddleware = (
     });
 };
 
-export const createRefreshToken = (payload: any) => {
+export const createRefreshToken = (payload: any, options?: jwt.SignOptions) => {
     payload.type = "refresh";
-    return jwt.sign(payload, config.jwtSecret, {
-        algorithm: "HS256",
-        expiresIn: "6h",
-        jwtid: uuid(),
-    });
+    if (!options) {
+        return jwt.sign(payload, config.jwtSecret);
+    }
+    if (!options.algorithm) {
+        options.algorithm = "HS256";
+    }
+    if (!options.expiresIn) {
+        options.expiresIn = "6h";
+    }
+    if (!options.jwtid) {
+        options.jwtid = uuid();
+    }
+    return jwt.sign(payload, config.jwtSecret, options);
 };
 
 export const verifyRefreshTokenMiddleware = (
@@ -75,12 +91,12 @@ export const verifyRefreshTokenMiddleware = (
     const jwtToken = bearer.split("Bearer ")[1];
     verifyJwt(jwtToken, (error, decoded) => {
         if (error?.message === "jwt expired") {
-            throw new ResponseException(-1972, "토큰이 만료됐습니다.");
+            throw new ResponseException(-100, "토큰이 만료됐습니다.");
         } else if (
             error?.message === "invalid token" ||
             (decoded as any).type !== "refresh"
         ) {
-            throw new ResponseException(-1973, "토큰이 유효하지 않습니다.");
+            throw new ResponseException(-101, "토큰이 유효하지 않습니다.");
         } else if (error) {
             logger.error(error);
             throw new HttpException(500);
