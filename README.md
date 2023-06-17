@@ -10,7 +10,7 @@ To install `common-api-ts` as a dependency of your Node.js project:
 npm install common-api-ts
 ```
 
-`common-api-ts` is made by TypeScript, so you don't need to download DefinitelyTyped package.
+`common-api-ts` is made with TypeScript, so you don't need to download DefinitelyTyped package.
 
 ## How to use
 
