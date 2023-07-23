@@ -1,6 +1,6 @@
 # common-api-ts
 
-Simple backend framework with jwt and mysql support.
+Simple backend framework with JWT and MySQL support.
 
 ## Installation into an existing project
 
