@@ -49,6 +49,7 @@ export const verifyAccessTokenMiddleware = (
         if (error?.message === "jwt expired") {
             throw new ResponseException(-100, "토큰이 만료됐습니다.");
         } else if (
+            !decoded ||
             error?.message === "invalid token" ||
             (decoded as any).type !== "access"
         ) {
@@ -93,6 +94,7 @@ export const verifyRefreshTokenMiddleware = (
         if (error?.message === "jwt expired") {
             throw new ResponseException(-100, "토큰이 만료됐습니다.");
         } else if (
+            !decoded ||
             error?.message === "invalid token" ||
             (decoded as any).type !== "refresh"
         ) {
