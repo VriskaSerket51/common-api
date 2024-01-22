@@ -4,39 +4,36 @@ import { MySqlException } from "../exceptions";
 import { logger } from "../logger";
 
 export const connection = async () => {
-    try {
-        return await mysql.createConnection(config.db);
-    } catch (error) {
-        logger.error(error);
-        throw new MySqlException(error);
-    }
+  try {
+    return await mysql.createConnection(config.db);
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  }
 };
 
 export const query = async (sql: string, values: any) => {
-    const conn = await connection();
-    try {
-        const [rows, fields] = await conn.query<mysql.RowDataPacket[]>(
-            sql,
-            values
-        );
-        return rows;
-    } catch (error) {
-        logger.error(error);
-        throw new MySqlException(error);
-    } finally {
-        await conn.end();
-    }
+  const conn = await connection();
+  try {
+    const [rows, fields] = await conn.query<mysql.RowDataPacket[]>(sql, values);
+    return rows;
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  } finally {
+    await conn.end();
+  }
 };
 
 export const execute = async (sql: string, values: any) => {
-    const conn = await connection();
-    try {
-        const [rows, fields] = await conn.execute<mysql.OkPacket>(sql, values);
-        return rows;
-    } catch (error) {
-        logger.error(error);
-        throw new MySqlException(error);
-    } finally {
-        await conn.end();
-    }
+  const conn = await connection();
+  try {
+    const [rows, fields] = await conn.execute<mysql.OkPacket>(sql, values);
+    return rows;
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  } finally {
+    await conn.end();
+  }
 };
