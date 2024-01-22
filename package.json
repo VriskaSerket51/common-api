@@ -1,6 +1,6 @@
 {
   "name": "common-api-ts",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Simple Backend framework with JWT and MySQL support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
