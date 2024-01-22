@@ -44,10 +44,10 @@ export const execute = async (sql: string, values: any) => {
   }
 };
 
-export const getFirstAsync = async (sql: string, values: any) => {
+export const getFirstAsync = async (sql: string, values?: any) => {
   const conn = await connection();
   try {
-    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values);
+    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values || []);
     if (rows.length > 0) {
       return rows[0];
     }
@@ -60,10 +60,10 @@ export const getFirstAsync = async (sql: string, values: any) => {
   }
 };
 
-export const getAllAsync = async (sql: string, values: any) => {
+export const getAllAsync = async (sql: string, values?: any) => {
   const conn = await connection();
   try {
-    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values);
+    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values || []);
     return rows;
   } catch (error) {
     logger.error(error);
@@ -73,10 +73,10 @@ export const getAllAsync = async (sql: string, values: any) => {
   }
 };
 
-export const runAsync = async (sql: string, values: any) => {
+export const runAsync = async (sql: string, values?: any) => {
   const conn = await connection();
   try {
-    const [rows, _] = await conn.execute<mysql.OkPacket>(sql, values);
+    const [rows, _] = await conn.execute<mysql.ResultSetHeader>(sql, values || []);
     return rows;
   } catch (error) {
     logger.error(error);
