@@ -12,6 +12,9 @@ export const connection = async () => {
   }
 };
 
+/**
+ * @deprecated Use runAsync instead.
+ */
 export const query = async (sql: string, values: any) => {
   const conn = await connection();
   try {
@@ -25,10 +28,55 @@ export const query = async (sql: string, values: any) => {
   }
 };
 
+/**
+ * @deprecated Use getFirstAsync or getAllAsync instead.
+ */
 export const execute = async (sql: string, values: any) => {
   const conn = await connection();
   try {
     const [rows, fields] = await conn.execute<mysql.OkPacket>(sql, values);
+    return rows;
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  } finally {
+    await conn.end();
+  }
+};
+
+export const getFirstAsync = async (sql: string, values: any) => {
+  const conn = await connection();
+  try {
+    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values);
+    if (rows.length > 0) {
+      return rows[0];
+    }
+    return null;
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  } finally {
+    await conn.end();
+  }
+};
+
+export const getAllAsync = async (sql: string, values: any) => {
+  const conn = await connection();
+  try {
+    const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values);
+    return rows;
+  } catch (error) {
+    logger.error(error);
+    throw new MySqlException(error);
+  } finally {
+    await conn.end();
+  }
+};
+
+export const runAsync = async (sql: string, values: any) => {
+  const conn = await connection();
+  try {
+    const [rows, _] = await conn.execute<mysql.OkPacket>(sql, values);
     return rows;
   } catch (error) {
     logger.error(error);
