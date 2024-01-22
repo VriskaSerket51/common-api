@@ -1,7 +1,3 @@
-export * as default from "./export";
-
-
-// For legacy
 export * from "./config";
 export * from "./exceptions";
 export * from "./logger";
