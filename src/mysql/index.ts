@@ -44,7 +44,7 @@ export const execute = async (sql: string, values: any) => {
   }
 };
 
-export const getFirstAsync = async (sql: string, values?: any) => {
+export const getFirstAsync = async (sql: string, values?: any[]) => {
   const conn = await connection();
   try {
     const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values || []);
@@ -60,7 +60,7 @@ export const getFirstAsync = async (sql: string, values?: any) => {
   }
 };
 
-export const getAllAsync = async (sql: string, values?: any) => {
+export const getAllAsync = async (sql: string, values?: any[]) => {
   const conn = await connection();
   try {
     const [rows, _] = await conn.execute<mysql.RowDataPacket[]>(sql, values || []);
@@ -73,7 +73,7 @@ export const getAllAsync = async (sql: string, values?: any) => {
   }
 };
 
-export const runAsync = async (sql: string, values?: any) => {
+export const runAsync = async (sql: string, values?: any[]) => {
   const conn = await connection();
   try {
     const [rows, _] = await conn.execute<mysql.ResultSetHeader>(sql, values || []);
