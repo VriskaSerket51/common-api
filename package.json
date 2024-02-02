@@ -1,5 +1,5 @@
 {
-  "name": "common-api-ts",
+  "name": "@ireves/common-api",
   "version": "1.4.3",
   "description": "Simple Backend framework with JWT and MySQL support.",
   "main": "dist/index.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/VriskaSerket51/common-api-ts.git"
+    "url": "git+https://github.com/VriskaSerket51/common-api.git"
   },
   "keywords": [
     "api",
@@ -23,9 +23,9 @@
   "author": "VriskaSerket51",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/VriskaSerket51/common-api-ts/issues"
+    "url": "https://github.com/VriskaSerket51/common-api/issues"
   },
-  "homepage": "https://github.com/VriskaSerket51/common-api-ts#readme",
+  "homepage": "https://github.com/VriskaSerket51/common-api#readme",
   "dependencies": {
     "@types/cors": "^2.8.12",
     "@types/jsonwebtoken": "^9.0.5",
