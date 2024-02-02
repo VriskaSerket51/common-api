@@ -1,41 +1,33 @@
-# common-api-ts
+# common-api
 
 Simple backend framework with JWT and MySQL support.
 
 ## Installation into an existing project
 
-To install `common-api-ts` as a dependency of your Node.js project:
+To install `common-api` as a dependency of your Node.js project:
 
 ```sh
-npm install common-api-ts
+npm install @ireves/common-api
 ```
 
-`common-api-ts` is made with TypeScript, so you don't need to download DefinitelyTyped package.
+`common-api` is made with TypeScript.
 
 ## How to use
 
 ```javascript
-import {
-    App,
-    Config,
-    ModelBase,
-    Schedule,
-    initializeConfig,
-    initializeScheduler,
-    logger,
-} from "common-api-ts";
+import CommonApi from "@ireves/common-api";
 import path from "path";
 
-initializeConfig(config);
-initializeScheduler(schedules);
+CommonApi.initializeConfig(config);
+CommonApi.initializeScheduler(schedules);
 
 runExpressApp();
 
 function runExpressApp() {
-    const app = new App(
+    const app = new CommonApi.App(
         path.join(__dirname, "router"),
         [],
-        routerMiddleware,
+        CommonApi.defaultRouterMiddlewares,
         []
     );
     app.run(
@@ -44,14 +36,14 @@ function runExpressApp() {
             console.info(`Server started with port: ${config.port}`);
         },
         (error) => {
-            logger.error(error);
+            CommonApi.logger.error(error);
         }
     );
 }
 ```
 
 ```javascript
-const config: Config = {
+const config: CommonApi.Config = {
     jwtSecret: "secret",
     db: {
         host: "127.0.0.1",
@@ -64,7 +56,7 @@ const config: Config = {
 ```
 
 ```javascript
-const schedules: Schedule[] = [
+const schedules: CommonApi.Schedule[] = [
     name: "testSchedule",
     cron: "00 00 00 * * *",
     job: () => {
