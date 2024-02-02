@@ -13,7 +13,14 @@ export const createRouterByFiles = (
   }
 
   const fileNames: string[] = [];
-  readAllFiles(dirName, fileNames, (fileName) => fileName.endsWith(".ts"));
+  readAllFiles(
+    dirName,
+    fileNames,
+    (fileName) =>
+      fileName.endsWith(".ts") ||
+      fileName.endsWith(".js") ||
+      fileName.endsWith(".mjs")
+  );
 
   fileNames.forEach((fileName) => {
     const module = require(fileName).default;
