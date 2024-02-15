@@ -1,4 +1,5 @@
 src/
 logs/
+package-lock.json
 
 tsconfig.json
