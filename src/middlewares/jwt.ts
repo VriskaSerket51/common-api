@@ -7,14 +7,27 @@ import { logger } from "../logger";
 
 export const createAccessToken = (payload: any, options?: jwt.SignOptions) => {
   payload.type = "access";
-  if (!options) {
-    return jwt.sign(payload, config.jwtSecret);
-  }
+  options = options || {};
   if (!options.algorithm) {
     options.algorithm = "HS256";
   }
   if (!options.expiresIn) {
     options.expiresIn = "10m";
+  }
+  if (!options.jwtid) {
+    options.jwtid = uuid();
+  }
+  return jwt.sign(payload, config.jwtSecret, options);
+};
+
+export const createRefreshToken = (payload: any, options?: jwt.SignOptions) => {
+  payload.type = "refresh";
+  options = options || {};
+  if (!options.algorithm) {
+    options.algorithm = "HS256";
+  }
+  if (!options.expiresIn) {
+    options.expiresIn = "6h";
   }
   if (!options.jwtid) {
     options.jwtid = uuid();
@@ -61,23 +74,6 @@ export const verifyAccessTokenMiddleware = (
       next();
     }
   });
-};
-
-export const createRefreshToken = (payload: any, options?: jwt.SignOptions) => {
-  payload.type = "refresh";
-  if (!options) {
-    return jwt.sign(payload, config.jwtSecret);
-  }
-  if (!options.algorithm) {
-    options.algorithm = "HS256";
-  }
-  if (!options.expiresIn) {
-    options.expiresIn = "6h";
-  }
-  if (!options.jwtid) {
-    options.jwtid = uuid();
-  }
-  return jwt.sign(payload, config.jwtSecret, options);
 };
 
 export const verifyRefreshTokenMiddleware = (
