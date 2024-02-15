@@ -5,8 +5,14 @@ import { HttpException, ResponseException } from "../exceptions";
 import { v4 as uuid } from "uuid";
 import { logger } from "../logger";
 
-export const createAccessToken = (payload: any, options?: jwt.SignOptions) => {
-  payload.type = "access";
+export const createAccessToken = (
+  payload: object,
+  options?: jwt.SignOptions
+) => {
+  payload = {
+    ...payload,
+    type: "access",
+  };
   options = options || {};
   if (!options.algorithm) {
     options.algorithm = "HS256";
@@ -20,8 +26,14 @@ export const createAccessToken = (payload: any, options?: jwt.SignOptions) => {
   return jwt.sign(payload, config.jwtSecret, options);
 };
 
-export const createRefreshToken = (payload: any, options?: jwt.SignOptions) => {
-  payload.type = "refresh";
+export const createRefreshToken = (
+  payload: object,
+  options?: jwt.SignOptions
+) => {
+  payload = {
+    ...payload,
+    type: "refresh",
+  };
   options = options || {};
   if (!options.algorithm) {
     options.algorithm = "HS256";
