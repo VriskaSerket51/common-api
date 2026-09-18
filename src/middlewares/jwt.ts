@@ -1,117 +1,70 @@
 import jwt from "jsonwebtoken";
-import { Response, Request, NextFunction } from "express";
-import config from "../config";
-import { HttpException, ResponseException } from "../exceptions";
+import type { Response, Request, NextFunction } from "express";
+import { getConfig } from "../config/index.js";
+import { HttpException, ResponseException } from "../exceptions/index.js";
 import { v4 as uuid } from "uuid";
-import { logger } from "../logger";
 
-export const createAccessToken = (
-  payload: object,
-  options?: jwt.SignOptions
-) => {
-  payload = {
-    ...payload,
-    type: "access",
-  };
-  options = options || {};
-  if (!options.algorithm) {
-    options.algorithm = "HS256";
+export interface AuthPayload extends jwt.JwtPayload {
+  type: "access" | "refresh";
+}
+
+declare global {
+  namespace Express {
+    interface Locals {
+      auth?: AuthPayload;
+    }
   }
-  if (!options.expiresIn) {
-    options.expiresIn = "10m";
-  }
-  if (!options.jwtid) {
-    options.jwtid = uuid();
-  }
-  return jwt.sign(payload, config.jwtSecret, options);
+}
+
+const createToken = (type: AuthPayload["type"], payload: object, options: jwt.SignOptions = {}) =>
+  jwt.sign({ ...payload, type }, getConfig().jwtSecret, {
+    ...options,
+    algorithm: options.algorithm ?? "HS256",
+    expiresIn: options.expiresIn ?? (type === "access" ? "10m" : "6h"),
+    jwtid: options.jwtid ?? uuid(),
+  });
+
+export const createAccessToken = (payload: object, options?: jwt.SignOptions) =>
+  createToken("access", payload, options);
+
+export const createRefreshToken = (payload: object, options?: jwt.SignOptions) =>
+  createToken("refresh", payload, options);
+
+export const verifyJwt = (token: string, callback: jwt.VerifyCallback<string | jwt.JwtPayload>) => {
+  jwt.verify(token, getConfig().jwtSecret, callback);
 };
 
-export const createRefreshToken = (
-  payload: object,
-  options?: jwt.SignOptions
-) => {
-  payload = {
-    ...payload,
-    type: "refresh",
-  };
-  options = options || {};
-  if (!options.algorithm) {
-    options.algorithm = "HS256";
+const verifyToken = (
+  type: AuthPayload["type"], req: Request, res: Response, next: NextFunction, required = true,
+): void => {
+  delete res.locals.auth;
+  const bearer = req.headers.authorization;
+  if (!bearer) {
+    if (required) next(new HttpException(401));
+    else next();
+    return;
   }
-  if (!options.expiresIn) {
-    options.expiresIn = "6h";
+  const match = /^Bearer\s+(\S+)$/i.exec(bearer);
+  if (!match) {
+    next(new HttpException(401));
+    return;
   }
-  if (!options.jwtid) {
-    options.jwtid = uuid();
-  }
-  return jwt.sign(payload, config.jwtSecret, options);
-};
-
-export const verifyJwt = (
-  token: string,
-  callback: jwt.VerifyCallback<string | jwt.JwtPayload>
-) => {
-  jwt.verify(token, config.jwtSecret, callback);
+  verifyJwt(match[1], (error, decoded) => {
+    if (error instanceof jwt.TokenExpiredError) {
+      next(new ResponseException(-100, "토큰이 만료됐습니다."));
+    } else if (error || !decoded || typeof decoded === "string" || decoded.type !== type) {
+      next(new ResponseException(-101, "토큰이 유효하지 않습니다."));
+    } else {
+      res.locals.auth = decoded as AuthPayload;
+      next();
+    }
+  });
 };
 
 export const verifyAccessTokenMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-  isRequired: boolean = true
-) => {
-  const bearer = req.headers.authorization;
-  if (!bearer || !bearer.startsWith("Bearer ")) {
-    if (isRequired) {
-      throw new HttpException(401);
-    } else {
-      next();
-      return;
-    }
-  }
-  const jwtToken = bearer.split("Bearer ")[1];
-  verifyJwt(jwtToken, (error, decoded) => {
-    if (error?.message === "jwt expired") {
-      throw new ResponseException(-100, "토큰이 만료됐습니다.");
-    } else if (
-      !decoded ||
-      error?.message === "invalid token" ||
-      (decoded as any).type !== "access"
-    ) {
-      throw new ResponseException(-101, "토큰이 유효하지 않습니다.");
-    } else if (error) {
-      logger.error(error);
-      throw new HttpException(500);
-    } else {
-      next();
-    }
-  });
-};
+  req: Request, res: Response, next: NextFunction, isRequired = true,
+): void => verifyToken("access", req, res, next, isRequired);
 
 export const verifyRefreshTokenMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const bearer = req.headers.authorization;
-  if (!bearer || !bearer.startsWith("Bearer ")) {
-    throw new HttpException(401);
-  }
-  const jwtToken = bearer.split("Bearer ")[1];
-  verifyJwt(jwtToken, (error, decoded) => {
-    if (error?.message === "jwt expired") {
-      throw new ResponseException(-100, "토큰이 만료됐습니다.");
-    } else if (
-      !decoded ||
-      error?.message === "invalid token" ||
-      (decoded as any).type !== "refresh"
-    ) {
-      throw new ResponseException(-101, "토큰이 유효하지 않습니다.");
-    } else if (error) {
-      logger.error(error);
-      throw new HttpException(500);
-    } else {
-      next();
-    }
-  });
-};
+  req: Request, res: Response, next: NextFunction,
+): void => verifyToken("refresh", req, res, next);

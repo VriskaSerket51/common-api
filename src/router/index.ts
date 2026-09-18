@@ -1,15 +1,41 @@
-import { Router, Request, Response } from "express";
-import { RouterMiddleware } from "../middlewares";
-import { readAllFiles } from "../utils";
+import { Router, type RequestHandler } from "express";
+import { pathToFileURL } from "node:url";
+import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middlewares/index.js";
+import { readAllFiles } from "../utils/index.js";
 
-export const createRouterByFiles = (
-  dirName: string,
-  modelMiddleware: RouterMiddleware
+export interface RouterDefinition {
+  path: string;
+  models: readonly ModelBase[];
+}
+
+export const createRouter = (
+  definitions: readonly RouterDefinition[],
+  modelMiddleware: RouterMiddleware = defaultRouterMiddlewares,
 ): Router => {
-  const defaultRouter = Router();
+  const root = Router();
+  for (const definition of definitions) {
+    const router = Router();
+    for (const model of definition.models) {
+      router[model.method](
+        model.path,
+        ...modelMiddleware(model),
+        ...(model.middlewares ?? []),
+        model.controller,
+      );
+    }
+    root.use(definition.path, router);
+  }
+  return root;
+};
+
+export const createRouterByFiles = async (
+  dirName: string,
+  modelMiddleware: RouterMiddleware = defaultRouterMiddlewares
+): Promise<Router> => {
+  const definitions: RouterDefinition[] = [];
 
   if (!dirName) {
-    return defaultRouter;
+    return createRouter(definitions, modelMiddleware);
   }
 
   const fileNames: string[] = [];
@@ -17,45 +43,36 @@ export const createRouterByFiles = (
     dirName,
     fileNames,
     (fileName) =>
-      fileName.endsWith(".ts") ||
-      fileName.endsWith(".js") ||
-      fileName.endsWith(".mjs")
+      /\.(?:ts|mts|js|mjs)$/.test(fileName) &&
+      !/\.d\.(?:ts|mts)$/.test(fileName)
   );
 
-  fileNames.forEach((fileName) => {
-    const module = require(fileName).default;
+  for (const fileName of fileNames) {
+    const module = (await import(pathToFileURL(fileName).href)).default;
     if (!module || !(module.prototype instanceof RouterBase)) {
-      return;
+      continue;
     }
-    const subrouter: RouterBase = new module();
+    definitions.push(new module());
+  }
 
-    const router = Router();
-    subrouter.models.forEach((model) => {
-      router[model.method](
-        model.path,
-        ...modelMiddleware(model),
-        model.controller
-      );
-    });
-    defaultRouter.use(subrouter.path, router);
-  });
-
-  return defaultRouter;
+  return createRouter(definitions, modelMiddleware);
 };
 
 export interface ModelBase {
-  method: "get" | "post" | "put" | "patch" | "delete";
+  method: "get" | "post" | "put" | "patch" | "delete" | "head" | "options";
   path: string;
   authType?: "access" | "refresh" | "optional";
+  /** Requires a PermissionChecker supplied through createRouterMiddlewares(). */
   permission?: number;
-  controller: (req: Request, res: Response) => any;
+  middlewares?: readonly Middleware[];
+  controller: RequestHandler;
 }
 
-export class RouterBase {
+export type RouteDefinition = ModelBase;
+
+export class RouterBase implements RouterDefinition {
   path: string = "";
   models: ModelBase[] = [];
-
-  constructor() {}
 
   setPath(path: string) {
     this.path += path;
