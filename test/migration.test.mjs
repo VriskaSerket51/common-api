@@ -98,10 +98,9 @@ test('file routers, JWTs and rejected async controllers work with Express 5', as
     server = app.expressApp.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const base = `http://127.0.0.1:${server.address().port}`;
-    const access = api.createAccessToken({ sub: 'test-user' });
-    const refresh = api.createRefreshToken({ sub: 'test-user' });
-    const decoded = await new Promise((resolve, reject) =>
-      api.verifyJwt(access, (error, payload) => error ? reject(error) : resolve(payload)));
+    const access = await api.createAccessToken({ sub: 'test-user' });
+    const refresh = await api.createRefreshToken({ sub: 'test-user' });
+    const decoded = await api.verifyJwt(access);
     assert.match(decoded.jti, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.equal((await fetch(`${base}/users/me`)).status, 401);
     assert.deepEqual(await (await fetch(`${base}/users/me`, {

@@ -1,0 +1,13 @@
+{
+  "secret": "legacy-fixture-key-32-bytes-minimum",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsZWdhY3ktdXNlciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiaXNzIjoibGVnYWN5LWlzc3VlciIsImF1ZCI6ImxlZ2FjeS1hcGkiLCJqdGkiOiJsZWdhY3ktaWQifQ.aXYRHq_4AQY3UiGocIvsvwwRYy3-qIXU-aLCyia4_S4",
+  "payload": {
+    "sub": "legacy-user",
+    "type": "access",
+    "iat": 1700000000,
+    "exp": 4102444800,
+    "iss": "legacy-issuer",
+    "aud": "legacy-api",
+    "jti": "legacy-id"
+  }
+}

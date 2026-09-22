@@ -36,7 +36,7 @@ test('options register routes, enforce auth before local middleware, and priorit
     assert.equal((await fetch(`${base}/private`)).status, 401);
     assert.deepEqual(calls.splice(0), ['global']);
     const response = await fetch(`${base}/private`, {
-      headers: { Authorization: `Bearer ${createAccessToken({ sub: 'user' })}` },
+      headers: { Authorization: `Bearer ${await createAccessToken({ sub: 'user' })}` },
     });
     assert.deepEqual(await response.json(), { ok: true });
     assert.equal(response.headers.get('access-control-allow-origin'), 'https://example.com');

@@ -10,8 +10,8 @@ const config = { jwtSecret: 'explicit-test-secret', db: {
 } };
 after(() => logger.close());
 
-test('configuration is required, validated and copied before JWT use', () => {
-  assert.throws(() => createAccessToken({}), /initializeConfig/);
+test('configuration is required, validated and copied before JWT use', async () => {
+  await assert.rejects(createAccessToken({}), /initializeConfig/);
   for (const jwtSecret of ['', ' ', 'jwtSecret']) {
     assert.throws(() => initializeConfig({ ...config, jwtSecret }), /jwtSecret/);
   }
@@ -26,9 +26,8 @@ test('configuration is required, validated and copied before JWT use', () => {
 
 test('token creation preserves caller options and explicit zero expiry', async () => {
   const options = Object.freeze({ expiresIn: 0 });
-  const token = createAccessToken({ sub: 'expired' }, options);
-  const error = await new Promise(resolve => verifyJwt(token, err => resolve(err)));
-  assert.equal(error.name, 'TokenExpiredError');
+  const token = await createAccessToken({ sub: 'expired' }, options);
+  await assert.rejects(verifyJwt(token), { code: 'ERR_JWT_EXPIRED' });
   assert.deepEqual(options, { expiresIn: 0 });
 });
 
@@ -57,13 +56,13 @@ test('verified identity, permissions and invalid optional credentials are enforc
     const request = (route, token) => fetch(base + route, token ? { headers: { Authorization: token } } : {});
     assert.equal((await request('/protected')).status, 401);
     assert.equal(checks, 0);
-    assert.equal((await request('/protected', `Bearer ${createAccessToken({ sub: 'denied' })}`)).status, 403);
-    const authorized = await request('/protected', `bearer ${createAccessToken({ sub: 'allowed', permissions: [7] })}`);
+    assert.equal((await request('/protected', `Bearer ${await createAccessToken({ sub: 'denied' })}`)).status, 403);
+    const authorized = await request('/protected', `bearer ${await createAccessToken({ sub: 'allowed', permissions: [7] })}`);
     assert.deepEqual(await authorized.json(), { sub: 'allowed' });
     assert.deepEqual(await (await request('/optional')).json(), { sub: null });
     assert.equal((await request('/optional', 'Basic invalid')).status, 401);
     for (const [token, expected] of [
-      ['invalid', -101], [createRefreshToken({}), -101], [createAccessToken({}, { expiresIn: 0 }), -100],
+      ['invalid', -101], [await createRefreshToken({}), -101], [await createAccessToken({}, { expiresIn: 0 }), -100],
     ]) {
       const result = await (await request('/optional', `Bearer ${token}`)).json();
       assert.equal(result.status, expected);

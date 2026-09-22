@@ -1,12 +1,42 @@
-import jwt from "jsonwebtoken";
+import { SignJWT, jwtVerify, errors, type JWTPayload, type JWTVerifyOptions } from "jose";
 import type { Response, Request, NextFunction } from "express";
 import { defaultConfigStore } from "../config/index.js";
 import { HttpException, ResponseException } from "../exceptions/index.js";
 import { v4 as uuid } from "uuid";
 
-export interface AuthPayload extends jwt.JwtPayload {
+export interface AuthPayload extends JWTPayload {
   type: "access" | "refresh";
 }
+
+export interface JwtSignOptions {
+  algorithm?: "HS256";
+  /** Seconds, or an explicit duration such as "10m", "6h", "7d". */
+  expiresIn?: number | string;
+  notBefore?: number | string;
+  issuer?: string;
+  audience?: string | string[];
+  subject?: string;
+  jwtid?: string;
+  noTimestamp?: boolean;
+}
+export type JwtVerifyOptions = Omit<JWTVerifyOptions, "algorithms" | "crit">;
+
+const durationSeconds = (value: number | string): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const match = /^(-?\d+(?:\.\d+)?)\s*(s|m|h|d|w)$/i.exec(value.trim());
+    if (match) {
+      const units: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400, w: 604800 };
+      const seconds = Number(match[1]) * units[match[2].toLowerCase()];
+      if (Number.isFinite(seconds)) return seconds;
+    }
+  }
+  throw new TypeError("JWT duration must be seconds or a number followed by s, m, h, d, or w.");
+};
+
+const signingOptions = new Set([
+  "algorithm", "expiresIn", "notBefore", "issuer", "audience", "subject", "jwtid", "noTimestamp",
+]);
 
 declare global {
   namespace Express {
@@ -17,27 +47,58 @@ declare global {
 }
 
 export const createJwt = (resolveSecret: () => string) => {
-  const createToken = (type: AuthPayload["type"], payload: object, options: jwt.SignOptions = {}) =>
-    jwt.sign({ ...payload, type }, resolveSecret(), {
-      ...options,
-      algorithm: options.algorithm ?? "HS256",
-      expiresIn: options.expiresIn ?? (type === "access" ? "10m" : "6h"),
-      jwtid: options.jwtid ?? uuid(),
-    });
-
-  const createAccessToken = (payload: object, options?: jwt.SignOptions) =>
-    createToken("access", payload, options);
-
-  const createRefreshToken = (payload: object, options?: jwt.SignOptions) =>
-    createToken("refresh", payload, options);
-
-  const verifyJwt = (token: string, callback: jwt.VerifyCallback<string | jwt.JwtPayload>) => {
-    jwt.verify(token, resolveSecret(), callback);
+  const key = () => new TextEncoder().encode(resolveSecret());
+  const createToken = async (
+    type: AuthPayload["type"], payload: object, options: JwtSignOptions = {},
+  ): Promise<string> => {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new TypeError("JWT payload must be an object.");
+    }
+    for (const name of Object.keys(options)) {
+      if (!signingOptions.has(name)) throw new TypeError("Unsupported JWT signing option: " + name);
+    }
+    if (options.algorithm !== undefined && options.algorithm !== "HS256") {
+      throw new TypeError("This JWT service only supports HS256.");
+    }
+    const claims: JWTPayload = { ...payload, type };
+    const now = Math.floor(Date.now() / 1000);
+    const issuedAt = claims.iat ?? now;
+    if (typeof issuedAt !== "number" || !Number.isFinite(issuedAt)) throw new TypeError("iat must be a finite number.");
+    if (options.noTimestamp) delete claims.iat;
+    else claims.iat = issuedAt;
+    for (const [claim, option] of [["exp", "expiresIn"], ["nbf", "notBefore"], ["iss", "issuer"],
+      ["aud", "audience"], ["sub", "subject"], ["jti", "jwtid"]] as const) {
+      if (claims[claim] !== undefined && options[option] !== undefined) {
+        throw new TypeError("Specify " + claim + " in either payload or options, not both.");
+      }
+    }
+    claims.jti ??= options.jwtid ?? uuid();
+    if (claims.exp === undefined) claims.exp = Math.floor(issuedAt + durationSeconds(options.expiresIn ?? (type === "access" ? "10m" : "6h")));
+    if (options.notBefore !== undefined) claims.nbf = Math.floor(issuedAt + durationSeconds(options.notBefore));
+    if (options.issuer !== undefined) claims.iss = options.issuer;
+    if (options.audience !== undefined) claims.aud = options.audience;
+    if (options.subject !== undefined) claims.sub = options.subject;
+    for (const name of ["exp", "nbf"] as const) {
+      if (claims[name] !== undefined && (typeof claims[name] !== "number" || !Number.isFinite(claims[name]))) {
+        throw new TypeError(name + " must be a finite number.");
+      }
+    }
+    return new SignJWT(claims).setProtectedHeader({ alg: "HS256", typ: "JWT" }).sign(key());
   };
 
-  const verifyToken = (
+  const createAccessToken = (payload: object, options?: JwtSignOptions): Promise<string> =>
+    createToken("access", payload, options);
+  const createRefreshToken = (payload: object, options?: JwtSignOptions): Promise<string> =>
+    createToken("refresh", payload, options);
+
+  const verifyJwt = async (token: string, options: JwtVerifyOptions = {}): Promise<JWTPayload> => {
+    const { payload } = await jwtVerify(token, key(), { ...options, algorithms: ["HS256"] });
+    return payload;
+  };
+
+  const verifyToken = async (
     type: AuthPayload["type"], req: Request, res: Response, next: NextFunction, required = true,
-  ): void => {
+  ): Promise<void> => {
     delete res.locals.auth;
     const bearer = req.headers.authorization;
     if (!bearer) {
@@ -46,33 +107,30 @@ export const createJwt = (resolveSecret: () => string) => {
       return;
     }
     const match = /^Bearer\s+(\S+)$/i.exec(bearer);
-    if (!match) {
-      next(new HttpException(401));
+    if (!match) { next(new HttpException(401)); return; }
+    let decoded: JWTPayload;
+    try {
+      decoded = await verifyJwt(match[1]);
+    } catch (error) {
+      if (error instanceof errors.JWTExpired) next(new ResponseException(-100, "토큰이 만료됐습니다."));
+      else if (error instanceof errors.JOSEError) next(new ResponseException(-101, "토큰이 유효하지 않습니다."));
+      else next(error);
       return;
     }
-    verifyJwt(match[1], (error, decoded) => {
-      if (error instanceof jwt.TokenExpiredError) {
-        next(new ResponseException(-100, "토큰이 만료됐습니다."));
-      } else if (error || !decoded || typeof decoded === "string" || decoded.type !== type) {
-        next(new ResponseException(-101, "토큰이 유효하지 않습니다."));
-      } else {
-        res.locals.auth = decoded as AuthPayload;
-        next();
-      }
-    });
+    if (decoded.type !== type) { next(new ResponseException(-101, "토큰이 유효하지 않습니다.")); return; }
+    res.locals.auth = decoded as AuthPayload;
+    next();
   };
 
   const verifyAccessTokenMiddleware = (
     req: Request, res: Response, next: NextFunction, isRequired = true,
-  ): void => verifyToken("access", req, res, next, isRequired);
-
+  ): Promise<void> => verifyToken("access", req, res, next, isRequired);
   const verifyRefreshTokenMiddleware = (
     req: Request, res: Response, next: NextFunction,
-  ): void => verifyToken("refresh", req, res, next);
+  ): Promise<void> => verifyToken("refresh", req, res, next);
 
   return { createAccessToken, createRefreshToken, verifyJwt, verifyAccessTokenMiddleware, verifyRefreshTokenMiddleware };
 };
-
 export type JwtService = ReturnType<typeof createJwt>;
 export const defaultJwt = createJwt(defaultConfigStore.jwtSecret);
 export const { createAccessToken, createRefreshToken, verifyJwt, verifyAccessTokenMiddleware, verifyRefreshTokenMiddleware } = defaultJwt;
