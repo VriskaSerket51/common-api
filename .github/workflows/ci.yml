@@ -28,8 +28,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
+      # test:package runs typecheck and all unit tests through prepack.
       - run: npm run test:package
 
   mysql:
