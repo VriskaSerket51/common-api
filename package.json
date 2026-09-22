@@ -1,6 +1,6 @@
 {
   "name": "@ireves/common-api",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "ESM backend framework with JWT, scheduling and typed database injection.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
