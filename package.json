@@ -1,6 +1,6 @@
 {
   "name": "@ireves/common-api",
-  "version": "1.4.11",
+  "version": "2.0.0",
   "description": "Simple Backend framework with JWT and MySQL support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,10 @@
     "build": "rimraf dist/ && tsc",
     "dev": "nodemon --watch \"./src/**/*.ts\" --exec \"tsx\" ./src/index.ts",
     "test": "npm run build && node --test test/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run typecheck && npm test",
+    "test:integration": "npm run build && node --test test/integration/*.test.mjs",
+    "test:package": "node scripts/check-package.mjs"
   },
   "repository": {
     "type": "git",
@@ -58,5 +61,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
-  }
+  },
+  "files": [
+    "dist",
+    "MIGRATION.md"
+  ]
 }

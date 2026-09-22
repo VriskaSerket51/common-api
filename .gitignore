@@ -30,6 +30,7 @@ report.*.json
 /.serena/
 /.npm/
 /.cache/
+/.package-check-*/
 .eslintcache
 .node_repl_history
 
