@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify, errors, type JWTPayload, type JWTVerifyOptions } fr
 import type { Response, Request, NextFunction } from "express";
 import { defaultConfigStore } from "../config/index.js";
 import { HttpException, ResponseException } from "../exceptions/index.js";
-import { v4 as uuid } from "uuid";
+import { randomUUID } from "node:crypto";
 
 export interface AuthPayload extends JWTPayload {
   type: "access" | "refresh";
@@ -72,7 +72,7 @@ export const createJwt = (resolveSecret: () => string) => {
         throw new TypeError("Specify " + claim + " in either payload or options, not both.");
       }
     }
-    claims.jti ??= options.jwtid ?? uuid();
+    claims.jti ??= options.jwtid ?? randomUUID();
     if (claims.exp === undefined) claims.exp = Math.floor(issuedAt + durationSeconds(options.expiresIn ?? (type === "access" ? "10m" : "6h")));
     if (options.notBefore !== undefined) claims.nbf = Math.floor(issuedAt + durationSeconds(options.notBefore));
     if (options.issuer !== undefined) claims.iss = options.issuer;
