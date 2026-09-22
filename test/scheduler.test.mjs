@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import scheduler from 'node-schedule';
 import { initializeScheduler, shutdownScheduler, logger } from '@ireves/common-api';
 
-after(async () => { await shutdownScheduler(); logger.close(); });
+after(async () => { await shutdownScheduler(); logger.flush(); });
 
 test('scheduler awaits asynchronous jobs and preserves scheduled dates', async () => {
   const pending = Promise.withResolvers();

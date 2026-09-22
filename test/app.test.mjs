@@ -9,7 +9,7 @@ import {
 initializeConfig({ jwtSecret: 'app-test-secret', db: {
   host: 'localhost', port: 3306, user: 'test', password: '', database: 'test',
 } });
-after(() => logger.close());
+after(() => logger.flush());
 
 test('options register routes, enforce auth before local middleware, and prioritize custom errors', async () => {
   const calls = [];

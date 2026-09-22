@@ -3,7 +3,7 @@ import { createJwt, defaultJwt } from "./middlewares/jwt.js";
 import { createDatabase, defaultDatabase } from "./mysql/index.js";
 import { createScheduler, defaultScheduler } from "./scheduler/index.js";
 import { createLogger, logger, type LoggerOptions } from "./logger/index.js";
-import type { Logger } from "winston";
+import type { Logger } from "pino";
 
 export interface RuntimeOptions {
   config?: Config;

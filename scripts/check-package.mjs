@@ -48,7 +48,7 @@ const token = await app.runtime.jwt.createAccessToken({ sub: 'package-user' });
 const claims = await app.runtime.jwt.verifyJwt(token);
 if (claims.sub !== 'package-user') throw new Error('JWT consumer check failed');
 await app.shutdown();
-app.runtime.logger.close();
+app.runtime.logger.flush();
 `;
     writeFileSync(path.join(consumer, 'index.ts'), sample);
     writeFileSync(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {

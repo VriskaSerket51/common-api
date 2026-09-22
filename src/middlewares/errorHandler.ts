@@ -22,7 +22,7 @@ export const createErrorHandler = (log = logger): ErrorRequestHandler => (error:
     res.sendStatus(status);
     return;
   }
-  log.error("Request failed", { error, requestId: res.locals.requestId, method: _req.method, path: _req.path });
+  log.error({ error, requestId: res.locals.requestId, method: _req.method, path: _req.path }, "Request failed");
   res.sendStatus(500);
 };
 

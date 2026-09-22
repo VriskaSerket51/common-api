@@ -1,12 +1,11 @@
-import winston from "winston";
-import winstonDaily from "winston-daily-rotate-file";
+import { pino, type DestinationStream, type LevelWithSilent, type Logger } from "pino";
+export type { Logger } from "pino";
 
 export interface LoggerOptions {
-  level?: string;
-  logDir?: string;
-  console?: boolean;
+  level?: LevelWithSilent;
   silent?: boolean;
-  transports?: winston.LoggerOptions["transports"];
+  /** Caller-owned output stream; defaults to stdout. */
+  destination?: DestinationStream;
 }
 
 export const serializeError = (error: unknown, seen = new WeakSet<object>()): unknown => {
@@ -21,31 +20,14 @@ export const serializeError = (error: unknown, seen = new WeakSet<object>()): un
   };
 };
 
-export const createLogger = (options: LoggerOptions = {}): winston.Logger => {
-  const transports: winston.transport[] = [];
-  if (options.console !== false) transports.push(new winston.transports.Console());
-  if (options.logDir) {
-    transports.push(new winstonDaily({
-      dirname: options.logDir, filename: "%DATE%.log", datePattern: "YYYY-MM-DD",
-      maxFiles: "30d", zippedArchive: true,
-    }));
-  }
-  return winston.createLogger({
-    level: options.level ?? "info", silent: options.silent,
-    format: winston.format.combine(
-      winston.format((info) => {
-        if (info instanceof Error) info.error = serializeError(info);
-        else if (info.error !== undefined) info.error = serializeError(info.error);
-        if (info.message instanceof Error) {
-          info.error = serializeError(info.message);
-          info.message = info.message.message;
-        }
-        return info;
-      })(),
-      winston.format.timestamp(), winston.format.json(),
-    ),
-    transports: options.transports ?? transports,
-  });
+/** Outputs Pino JSON records. The caller owns and closes custom destinations. */
+export const createLogger = (options: LoggerOptions = {}): Logger => {
+  const settings = {
+    level: options.silent ? "silent" : (options.level ?? "info"),
+    timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: { err: serializeError, error: serializeError },
+  };
+  return options.destination ? pino(settings, options.destination) : pino(settings);
 };
 
 export const logger = createLogger();

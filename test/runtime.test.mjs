@@ -17,7 +17,7 @@ test('options-object apps snapshot legacy configuration into independent runtime
     assert.equal(b.runtime.config.jwtSecret(), 'legacy-initial');
   } finally {
     await Promise.all([a.shutdown(), b.shutdown()]);
-    a.runtime.logger.close(); b.runtime.logger.close();
+    a.runtime.logger.flush(); b.runtime.logger.flush();
   }
 });
 
@@ -51,7 +51,7 @@ test('independent apps use their own signing keys and request contexts', async (
     assert.equal(runtimeA.config.jwtSecret(), 'app-a');
   } finally {
     await Promise.all([a.shutdown(), b.shutdown()]);
-    runtimeA.logger.close(); runtimeB.logger.close();
+    runtimeA.logger.flush(); runtimeB.logger.flush();
   }
 });
 
@@ -79,7 +79,7 @@ test('same database values and JWT-only updates keep the pool; separate runtimes
     assert.equal((await b.database.getFirstAsync('select')).database, 'other');
   } finally {
     await Promise.all([a.database.closeDatabase(), b.database.closeDatabase()]);
-    factory.mock.restore(); log.close();
+    factory.mock.restore(); log.flush();
   }
 });
 
@@ -100,7 +100,7 @@ test('HTTP deadline aborts request signals and closes connections', async () => 
     await app.close({ timeoutMs: 1000 });
     const restarted = await app.listen(0);
     assert.equal(restarted.listening, true);
-  } finally { await app.close(); runtime.logger.close(); }
+  } finally { await app.close(); runtime.logger.flush(); }
 });
 
 test('explicit cancellation bounds HTTP shutdown', async () => {

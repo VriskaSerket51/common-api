@@ -17,7 +17,7 @@ test('separate schedulers allow identical names and skip overlaps by default', a
     assert.equal(count, 2);
     gate.resolve();
     await pending;
-  } finally { gate.resolve(); await Promise.all([a.shutdown(), b.shutdown()]); log.close(); }
+  } finally { gate.resolve(); await Promise.all([a.shutdown(), b.shutdown()]); log.flush(); }
 });
 
 test('allow overlap runs both invocations and shutdown signals both', async () => {
@@ -38,7 +38,7 @@ test('allow overlap runs both invocations and shutdown signals both', async () =
     await Promise.all(pending);
     assert.equal(signals.length, 2);
     assert.ok(signals.every(signal => signal.aborted));
-  } finally { await scheduler.shutdown(); log.close(); }
+  } finally { await scheduler.shutdown(); log.flush(); }
 });
 
 test('non-cooperative job times out without pretending it stopped or closing its database', async () => {
@@ -58,5 +58,5 @@ test('non-cooperative job times out without pretending it stopped or closing its
     await running;
     await app.shutdown();
     assert.equal(databaseClosed, true);
-  } finally { gate.resolve(); await runtime.scheduler.shutdown(); runtime.logger.close(); }
+  } finally { gate.resolve(); await runtime.scheduler.shutdown(); runtime.logger.flush(); }
 });

@@ -98,10 +98,22 @@ options are absent; specifying the same claim in both places rejects.
 ## Logging and packaging
 
 The default logger emits JSON to stdout, without creating a directory on import.
-Use `createLogger({ logDir: 'logs' })` for optional daily files. Request failures
+Logging now uses Pino. Request failures
 include request ID, method, path, stack and nested causes. `res.locals.log` carries
 the ID returned in `X-Request-Id`; `res.locals.signal` signals disconnection or
 forced shutdown. Logger lifecycle belongs to the application that supplied it.
+
+- Injected loggers must be Pino loggers. Change `log.info('message', { data })`
+  to `log.info({ data }, 'message')`; metadata comes first.
+- Records use Pino's numeric `level`, `time` and `msg` fields. Error details
+  remain in `error` (or `err` for direct Error logging), including nested causes.
+- `logDir`, `console` and Winston `transports` options are removed. Use
+  `createLogger({ destination: stream })`, `silent: true`, or inject a configured
+  Pino logger. Daily rotation, compression and retention are managed externally.
+- Pino loggers have no `close()`/`end()`. Await `logger.flush(callback)` and
+  then end caller-owned streams/transports. Do not end stdout.
+- UUID v4 uses Node's `randomUUID()`. Development uses `tsx watch`; build
+  cleanup uses `fs.rm` with Windows retries. Node types track the 22.x runtime family.
 
 `npm pack` runs type checking and tests against a fresh build. Only `dist/` and
 package documentation are shipped. `npm run test:package` checks the tarball and

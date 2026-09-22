@@ -8,7 +8,7 @@ import {
 const config = { jwtSecret: 'explicit-test-secret', db: {
   host: 'localhost', port: 3306, user: 'test', password: '', database: 'test',
 } };
-after(() => logger.close());
+after(() => logger.flush());
 
 test('configuration is required, validated and copied before JWT use', async () => {
   await assert.rejects(createAccessToken({}), /initializeConfig/);

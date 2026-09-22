@@ -56,7 +56,7 @@ export const createScheduler = (log = logger) => {
         });
         if (!job) throw new Error("Invalid cron expression for schedule: " + schedule.name);
         entry.job = job;
-        job.on("error", (error: unknown) => log.error("Scheduled job failed", { job: schedule.name, error }));
+        job.on("error", (error: unknown) => log.error({ job: schedule.name, error }, "Scheduled job failed"));
         jobs.set(schedule.name, entry);
         created.push(schedule.name);
       }

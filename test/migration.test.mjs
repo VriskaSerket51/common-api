@@ -12,7 +12,7 @@ api.initializeConfig({
   jwtSecret: 'migration-test-secret',
   db: { host: 'localhost', port: 3306, user: 'test', password: '', database: 'test' },
 });
-after(() => api.logger.close());
+after(() => api.logger.flush());
 
 test('package exports provide the default API and named ESM exports', () => {
   assert.equal(api.App, App);
@@ -58,7 +58,7 @@ test('tsx loads TypeScript file routers during development', () => {
         assert.deepEqual(await response.json(), { development: true });
       } finally {
         await new Promise(resolve => server.close(resolve));
-        api.logger.close();
+        api.logger.flush();
       }
     `], { timeout: 10000, stdio: 'pipe' });
   } finally {

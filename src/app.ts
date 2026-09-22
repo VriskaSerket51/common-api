@@ -18,7 +18,7 @@ import {
 import { createRuntime, defaultRuntime, type Runtime } from "./runtime.js";
 import type { Config } from "./config/index.js";
 import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "./shutdown.js";
-import type { Logger } from "winston";
+import type { Logger } from "pino";
 import { HttpException } from "./exceptions/index.js";
 
 declare global {

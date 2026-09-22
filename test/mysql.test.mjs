@@ -9,7 +9,7 @@ import {
 initializeConfig({ jwtSecret: 'database-test-secret', db: {
   host: 'localhost', port: 3306, user: 'test', password: '', database: 'test', connectionLimit: 3,
 } });
-after(() => logger.close());
+after(() => logger.flush());
 
 test('helpers reuse a pool, preserve bindings, and wrap driver failures', async () => {
   const calls = [];

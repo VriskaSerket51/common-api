@@ -150,7 +150,7 @@ app.runtime.scheduler.initialize([{
   name: 'refresh-cache', cron: '*/30 * * * * *', overlap: 'skip',
   job: async ({ signal, scheduledAt }) => {
     await setTimeout(100, undefined, { signal });
-    app.runtime.logger.info('Cache refreshed', { scheduledAt });
+    app.runtime.logger.info({ scheduledAt }, 'Cache refreshed');
   },
 }]);
 
@@ -180,8 +180,11 @@ Legacy `ResponseException` retains HTTP 200 with an application status code.
 The default logger writes JSON to stdout. Error logs preserve stacks, causes and
 aggregate errors, along with request ID, method and path. `res.locals.log` carries
 the ID returned through `X-Request-Id`. No log directory is created on import.
-Use `createLogger({ logDir: 'logs' })` for optional daily files or inject a logger
-through `createRuntime({ logger })`. Logger lifecycle belongs to the application.
+Logging uses Pino: `log.info({ userId }, 'Signed in')`. Use
+`createLogger({ destination: stream })` for a caller-owned output stream, or inject
+a Pino logger through `createRuntime({ logger })`. File rotation and retention
+belong to the application's log collector or transport. Flush logs with
+`logger.flush(callback)` before closing custom streams; never close stdout.
 
 ## Development and verification
 
@@ -192,7 +195,7 @@ npm test
 npm run test:package
 ```
 
-Development uses `tsx`; builds use TypeScript 7 with `NodeNext`. `npm pack` runs
+Development uses `tsx watch` with all source TypeScript files included; builds use TypeScript 7 with `NodeNext`. `npm pack` runs
 type checking and tests on a fresh build. Only `dist/` and package documentation
 are shipped. Package checks extract the tarball and compile/run a typed ESM consumer.
 
