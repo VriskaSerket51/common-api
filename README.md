@@ -171,6 +171,16 @@ stays open, and the scheduler rejects new work until they settle.
 `res.locals.signal` also aborts on client disconnection. The library does not
 install global process signal handlers; connect your own handler to `shutdown()`.
 
+File routers are discovered asynchronously and loaded sequentially in relative-path
+order (case-sensitive, with slash-normalized paths). Explicit router arrays keep
+their supplied order. Give static routes earlier filenames than conflicting
+parameter routes. Declaration files are ignored.
+
+Scheduler initialization returns `ScheduledJob[]` handles with `name`,
+`nextInvocation()`, `cancel()` and `invoke(date?)`. The implementation uses Croner;
+no dependency-specific job class is exposed. Manual failures reject their promise;
+automatic failures are logged.
+
 ## Errors and logging
 
 Custom four-argument `errorHandlers` run before the fallback; call `next(error)`

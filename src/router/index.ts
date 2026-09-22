@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import { pathToFileURL } from "node:url";
 import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middlewares/index.js";
-import { readAllFiles } from "../utils/index.js";
+import { readAllFilesAsync } from "../utils/index.js";
 
 export interface RouterDefinition {
   path: string;
@@ -38,10 +38,8 @@ export const createRouterByFiles = async (
     return createRouter(definitions, modelMiddleware);
   }
 
-  const fileNames: string[] = [];
-  readAllFiles(
+  const fileNames = await readAllFilesAsync(
     dirName,
-    fileNames,
     (fileName) =>
       /\.(?:ts|mts|js|mjs)$/.test(fileName) &&
       !/\.d\.(?:ts|mts)$/.test(fileName)

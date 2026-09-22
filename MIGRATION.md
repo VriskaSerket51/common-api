@@ -122,3 +122,24 @@ compiles/runs a typed ESM consumer against its contents.
 Real MySQL tests are optional and disabled for push/PR CI. Enable the `mysql`
 input manually in CI or run `npm run test:integration` against an explicitly
 configured disposable database. They were not run as part of this migration.
+
+## Scheduler, routing and stricter types
+
+- Scheduling uses Croner. Initialization returns our `ScheduledJob[]` handles,
+  exposing `name`, `nextInvocation()`, `cancel()` and async `invoke(date?)`.
+  Raw node-schedule Job events and `reschedule()` are no longer exposed. Cancel
+  and initialize a new schedule instead. Active jobs must settle before reusing
+  their name. Manual invocation rejections are logged and propagated to the caller;
+  timer invocation failures are logged and contained. Cancellation stops future
+  invocations; scheduler shutdown also signals active jobs and drains them.
+- Existing five/six-field cron schedules remain supported. Croner has its own
+  extended syntax; check unusual expressions when migrating. A schedule with no
+  future execution is rejected. Jobs remain in-process and non-durable.
+- File routers now use asynchronous traversal, sorted by slash-normalized relative
+  path in case-sensitive code-unit order. This can change precedence between
+  overlapping file routes; rename files or use explicit ordered definitions.
+  The existing synchronous `readAllFiles` helper remains available;
+  `readAllFilesAsync` returns a sorted array without modifying an input array.
+- `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are enabled.
+- CI runs the package check once per matrix entry; its prepack hook still runs
+  type checking and the complete unit suite before the consumer check.
