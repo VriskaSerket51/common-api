@@ -12,12 +12,16 @@ export const serializeError = (error: unknown, seen = new WeakSet<object>()): un
   if (!(error instanceof Error)) return String(error);
   if (seen.has(error)) return "[Circular error]";
   seen.add(error);
-  return {
-    name: error.name, message: error.message, stack: error.stack,
-    ...(error.cause !== undefined ? { cause: serializeError(error.cause, seen) } : {}),
-    ...(error instanceof AggregateError ? { errors: error.errors.map(item => serializeError(item, seen)) } : {}),
-    ...("code" in error ? { code: error.code } : {}),
-  };
+  try {
+    return {
+      name: error.name, message: error.message, stack: error.stack,
+      ...(error.cause !== undefined ? { cause: serializeError(error.cause, seen) } : {}),
+      ...(error instanceof AggregateError ? { errors: error.errors.map(item => serializeError(item, seen)) } : {}),
+      ...("code" in error ? { code: error.code } : {}),
+    };
+  } finally {
+    seen.delete(error);
+  }
 };
 
 /** Outputs Pino JSON records. The caller owns and closes custom destinations. */

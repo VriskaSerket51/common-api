@@ -25,9 +25,10 @@ const durationSeconds = (value: number | string): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
     const match = /^(-?\d+(?:\.\d+)?)\s*(s|m|h|d|w)$/i.exec(value.trim());
-    if (match) {
+    if (match?.[1] !== undefined && match[2] !== undefined) {
       const units: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400, w: 604800 };
-      const seconds = Number(match[1]) * units[match[2].toLowerCase()];
+      const unit = units[match[2].toLowerCase()];
+      const seconds = unit === undefined ? NaN : Number(match[1]) * unit;
       if (Number.isFinite(seconds)) return seconds;
     }
   }
@@ -107,7 +108,7 @@ export const createJwt = (resolveSecret: () => string) => {
       return;
     }
     const match = /^Bearer\s+(\S+)$/i.exec(bearer);
-    if (!match) { next(new HttpException(401)); return; }
+    if (!match?.[1]) { next(new HttpException(401)); return; }
     let decoded: JWTPayload;
     try {
       decoded = await verifyJwt(match[1]);

@@ -18,7 +18,9 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noEmitOnError": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
   },
   "include": [
     "src/**/*.ts"

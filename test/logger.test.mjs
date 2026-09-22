@@ -31,6 +31,17 @@ test('circular error causes are serializable', () => {
   assert.equal(serializeError(error).cause, '[Circular error]');
 });
 
+test('shared errors retain details while actual ancestor cycles are marked', () => {
+  const shared = new Error('shared');
+  const root = new AggregateError([shared, shared], 'root', { cause: shared });
+  shared.cause = root;
+  const record = serializeError(root);
+  for (const item of [record.cause, ...record.errors]) {
+    assert.equal(item.message, 'shared');
+    assert.equal(item.cause, '[Circular error]');
+  }
+});
+
 test('Pino preserves direct and aggregate errors, child context and metadata', () => {
   const lines = [];
   const log = createLogger({ destination: { write(line) { lines.push(JSON.parse(line)); } } });
@@ -41,6 +52,7 @@ test('Pino preserves direct and aggregate errors, child context and metadata', (
   assert.equal(lines[0].requestId, 'request-1');
   assert.equal(lines[0].err.name, 'AggregateError');
   assert.equal(lines[0].err.cause.message, 'root cause');
+  assert.equal(lines[0].err.errors[0].message, 'root cause');
   assert.match(lines[0].err.stack, /batch failed/);
   assert.equal(lines[1].userId, 42);
   assert.equal(lines[1].msg, 'Signed in');

@@ -48,13 +48,14 @@ export default class App {
   readonly runtime: Runtime;
   private abortController = new AbortController();
   private sockets = new Set<Socket>();
-  private server?: Server;
-  private starting?: Promise<Server>;
-  private closing?: Promise<void>;
+  private server: Server | undefined;
+  private starting: Promise<Server> | undefined;
+  private closing: Promise<void> | undefined;
 
   private constructor(options: AppOptions) {
     if (options.runtime && options.config) throw new Error("Pass runtime or config, not both.");
-    this.runtime = options.runtime ?? createRuntime({ config: options.config ?? defaultRuntime.config.snapshot() });
+    const config = options.config ?? defaultRuntime.config.snapshot();
+    this.runtime = options.runtime ?? createRuntime(config === undefined ? {} : { config });
     this.expressApp = express();
     this.expressApp.use((_req, res, next) => {
       const requestId = randomUUID();
