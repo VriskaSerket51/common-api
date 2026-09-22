@@ -8,15 +8,6 @@ export class Exception extends Error {
   }
 }
 
-export class MySqlException extends Exception {
-  public error: unknown;
-
-  constructor(error: unknown) {
-    super("My SQL Error", { cause: error });
-    this.error = error;
-  }
-}
-
 export class HttpException extends Exception {
   public status: number;
 

@@ -5,9 +5,7 @@ import {
   verifyJwt, createRouterMiddlewares, logger,
 } from '@ireves/common-api';
 
-const config = { jwtSecret: 'explicit-test-secret', db: {
-  host: 'localhost', port: 3306, user: 'test', password: '', database: 'test',
-} };
+const config = { jwtSecret: 'explicit-test-secret' };
 after(() => logger.flush());
 
 test('configuration is required, validated and copied before JWT use', async () => {
@@ -15,11 +13,11 @@ test('configuration is required, validated and copied before JWT use', async () 
   for (const jwtSecret of ['', ' ', 'jwtSecret']) {
     assert.throws(() => initializeConfig({ ...config, jwtSecret }), /jwtSecret/);
   }
-  assert.throws(() => initializeConfig({ ...config, db: { ...config.db, port: 0 } }), /database/);
+  assert.throws(() => initializeConfig({ ...config, db: {} }), /config.db was removed/);
   initializeConfig(config);
-  config.db.host = 'changed';
-  assert.equal(getConfig().db.host, 'localhost');
-  assert.equal(Object.isFrozen(getConfig().db), true);
+  config.jwtSecret = 'changed';
+  assert.equal(getConfig().jwtSecret, 'explicit-test-secret');
+  assert.equal(Object.isFrozen(getConfig()), true);
   assert.throws(() => initializeConfig({ ...config, jwtSecret: '' }), /jwtSecret/);
   assert.equal(getConfig().jwtSecret, 'explicit-test-secret');
 });

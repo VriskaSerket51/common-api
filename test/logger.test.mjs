@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Writable } from 'node:stream';
-import { App, createRuntime, createLogger, MySqlException, serializeError } from '@ireves/common-api';
+import { App, createRuntime, createLogger, Exception, serializeError } from '@ireves/common-api';
 
 test('structured request logs retain stack, cause and request ID', async () => {
   const lines = [];
@@ -10,7 +10,7 @@ test('structured request logs retain stack, cause and request ID', async () => {
   const runtime = createRuntime({ logger: log });
   const cause = new Error('driver failure');
   const app = await App.create({ runtime, routers: [{ path: '/', models: [{
-    method: 'get', path: '/', controller: () => { throw new MySqlException(cause); },
+    method: 'get', path: '/', controller: () => { throw new Exception("Database operation failed", { cause }); },
   }] }] });
   try {
     const server = await app.listen(0);
@@ -19,9 +19,9 @@ test('structured request logs retain stack, cause and request ID', async () => {
     await new Promise((resolve, reject) => log.flush(error => error ? reject(error) : resolve()));
     const record = JSON.parse(lines.join('').trim());
     assert.equal(record.requestId, response.headers.get('x-request-id'));
-    assert.equal(record.error.name, 'MySqlException');
+    assert.equal(record.error.name, 'Exception');
     assert.equal(record.error.cause.message, 'driver failure');
-    assert.match(record.error.stack, /MySqlException/);
+    assert.match(record.error.stack, /Exception/);
     assert.equal(record.method, 'GET');
   } finally { await app.close(); log.flush(); }
 });

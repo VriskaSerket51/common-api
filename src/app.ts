@@ -31,9 +31,8 @@ declare global {
   }
 }
 
-export interface AppOptions {
+interface AppBaseOptions {
   config?: Config;
-  runtime?: Runtime;
   permissionChecker?: PermissionChecker;
   routerDir?: string;
   routers?: readonly RouterDefinition[];
@@ -43,19 +42,21 @@ export interface AppOptions {
   cors?: CorsOptions | false;
 }
 
-export default class App {
+export type AppOptions<TDatabase = undefined> = AppBaseOptions & (
+  [TDatabase] extends [undefined] ? { runtime?: Runtime<TDatabase> } : { runtime: Runtime<TDatabase> }
+);
+
+export default class App<TDatabase = undefined> {
   readonly expressApp: express.Application;
-  readonly runtime: Runtime;
+  readonly runtime: Runtime<TDatabase>;
   private abortController = new AbortController();
   private sockets = new Set<Socket>();
   private server: Server | undefined;
   private starting: Promise<Server> | undefined;
   private closing: Promise<void> | undefined;
 
-  private constructor(options: AppOptions) {
-    if (options.runtime && options.config) throw new Error("Pass runtime or config, not both.");
-    const config = options.config ?? defaultRuntime.config.snapshot();
-    this.runtime = options.runtime ?? createRuntime(config === undefined ? {} : { config });
+  private constructor(options: AppBaseOptions, runtime: Runtime<TDatabase>) {
+    this.runtime = runtime;
     this.expressApp = express();
     this.expressApp.use((_req, res, next) => {
       const requestId = randomUUID();
@@ -70,6 +71,7 @@ export default class App {
     this.initMiddlewares(options.middlewares ?? [], options.cors);
   }
 
+  static create<TDatabase>(options: AppOptions<TDatabase>): Promise<App<TDatabase>>;
   static create(options?: AppOptions): Promise<App>;
   /** @deprecated Pass an AppOptions object instead. */
   static create(
@@ -79,15 +81,18 @@ export default class App {
     errorHandlers: ErrorMiddleware[],
   ): Promise<App>;
   static async create(
-    optionsOrDirectory: AppOptions | string = {},
+    optionsOrDirectory: (AppBaseOptions & { runtime?: Runtime<unknown> }) | string = {},
     middlewares: Middleware[] = [],
     routerMiddleware: RouterMiddleware = defaultRouterMiddlewares,
     errorHandlers: ErrorMiddleware[] = [],
-  ): Promise<App> {
-    const options: AppOptions = typeof optionsOrDirectory === "string"
+  ): Promise<App<unknown>> {
+    const options = typeof optionsOrDirectory === "string"
       ? { routerDir: optionsOrDirectory, middlewares, routerMiddleware, errorHandlers, runtime: defaultRuntime }
       : optionsOrDirectory;
-    const app = new App(options);
+    if (options.runtime && options.config) throw new Error("Pass runtime or config, not both.");
+    const config = options.config ?? defaultRuntime.config.snapshot();
+    const runtime = options.runtime ?? createRuntime(config === undefined ? {} : { config });
+    const app = new App(options, runtime);
     const routeMiddleware = options.routerMiddleware ?? createRouterMiddlewares(options.permissionChecker, app.runtime.jwt);
     app.expressApp.use(createRouter(options.routers ?? [], routeMiddleware));
     if (options.routerDir) await app.initRouters(options.routerDir, routeMiddleware);
@@ -162,7 +167,7 @@ export default class App {
     ]);
     const errors = results.filter(result => result.status === "rejected").map(result => result.reason);
     if (errors.length) throw new AggregateError(errors, "Shutdown did not finish; database remains open for active work.");
-    await this.runtime.database.closeDatabase(remaining());
+    await this.runtime.closeDatabase(remaining());
   }
 
   /** @deprecated Use await app.listen(port) instead. */

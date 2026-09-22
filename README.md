@@ -1,6 +1,6 @@
 # common-api
 
-An ESM TypeScript backend library with Express 5, JWT, MySQL pools and scheduled
+An ESM TypeScript backend library with Express 5, JWT, typed database injection and scheduled
 jobs. Requires **Node.js 22.13.0+**. See [MIGRATION.md](./MIGRATION.md) when upgrading
 from 1.x.
 
@@ -115,31 +115,58 @@ bitmask meaning. Without a checker, permission routes fail at initialization.
 `initialize()` replaces all configuration. Use `createRuntime({ config, logger })`
 for explicit resource injection, then `App.create({ runtime })`.
 
-## MySQL
+## Database injection (Prisma or another client)
 
-DB-only applications do not need JWT settings:
+The application owns the database schema, migrations, driver adapter and client
+creation. This package does not install Prisma or a database driver and does not
+connect on import. Configure your Prisma client in your application's
+`database.ts` following the [Prisma documentation](https://www.prisma.io/docs/orm).
+The example below assumes that client has a `User` model.
+
+`runtime.database` is the exact object supplied, retaining all model and transaction
+types. DB-only apps need no JWT settings:
 
 ```typescript
-import { createRuntime } from '@ireves/common-api';
+import { App, createRuntime } from '@ireves/common-api';
+import { prisma } from './database.js'; // Your app's configured Prisma client.
 
-const runtime = createRuntime({ config: { db: {
-  host: '127.0.0.1', port: 3306, user: 'app', database: 'app',
-  password: process.env.DB_PASSWORD ?? '', connectionLimit: 10,
-} } });
-
-const rows = await runtime.database.getAllAsync('SELECT id FROM users WHERE active = ?', [true]);
-await runtime.database.withTransaction(async connection => {
-  await connection.execute('UPDATE accounts SET balance = balance - ? WHERE id = ?', [10, 1]);
-  await connection.execute('UPDATE accounts SET balance = balance + ? WHERE id = ?', [10, 2]);
+const runtime = createRuntime({
+  database: prisma,
+  disconnectDatabase: client => client.$disconnect(),
 });
-await runtime.database.closeDatabase({ timeoutMs: 5000 });
+const app = await App.create({
+  runtime,
+  routers: [{ path: '/users', models: [{
+    method: 'get', path: '/',
+    controller: async (_req, res) => {
+      const users = await runtime.database.user.findMany({ select: { id: true } });
+      res.json(users);
+    },
+  }] }],
+});
+await app.listen(3000);
+// On shutdown, after HTTP and jobs finish:
+await app.shutdown({ timeoutMs: 5000 });
 ```
 
-Pools are lazy. Reapplying equal DB values or rotating a JWT key preserves the
-pool. Changed DB connection values require finishing work and closing the old
-pool first. Transactions commit on success, roll back on failure, and discard
-connections if rollback fails. Always use the supplied transaction connection.
-Dedicated `connection()` callers are responsible for calling `end()`.
+Use your client's transaction API directly (for Prisma, `$transaction`); the
+framework neither wraps query errors nor changes transaction behavior. There is
+no global DB client. Without injection, `runtime.database` is `undefined`.
+`AppOptions<typeof prisma>` and `RuntimeOptions<typeof prisma>` preserve client
+types when storing options in variables.
+
+Omit `disconnectDatabase` for shared/external ownership: `shutdown()` will not
+close the client, even if it has `$disconnect()`. The application must disconnect
+shared clients after **all** users have stopped. If multiple apps share a runtime,
+coordinate their shutdown before calling `runtime.closeDatabase()`, or leave the
+client externally owned.
+
+For an owned client, `runtime.closeDatabase({ timeoutMs, signal })` invokes the
+callback once after successful completion. Concurrent calls share pending work;
+a timeout/abort stops waiting but does not cancel the underlying disconnect.
+Failures propagate unchanged and permit an explicit retry. Do not reuse an owned
+runtime after disconnect: create a new client/runtime for a new lifecycle. Direct
+client queries are not intercepted; stop external producers before disconnecting.
 
 ## Scheduling and shutdown
 
@@ -162,7 +189,7 @@ are unique per scheduler, so separate runtimes can use the same names. Jobs rece
 a cancellation signal and a copy of their scheduled date.
 
 `close()` drains HTTP only. `shutdown()` stops HTTP and jobs before closing the
-runtime's pool, sharing a total default deadline of 30 seconds. Both accept
+runtime's opt-in disconnect callback, sharing a total default deadline of 30 seconds. Both accept
 `{ timeoutMs, signal }`. Timeout/cancellation closes HTTP connections and aborts
 request signals. Jobs must cooperate with cancellation; arbitrary JavaScript
 cannot be forcibly stopped. If jobs do not finish, shutdown rejects, the database
@@ -209,10 +236,6 @@ Development uses `tsx watch` with all source TypeScript files included; builds u
 type checking and tests on a fresh build. Only `dist/` and package documentation
 are shipped. Package checks extract the tarball and compile/run a typed ESM consumer.
 
-CI covers Node 22.13.0, 24 and 26 on Linux and Windows. **Real MySQL tests are
-optional and disabled for push/PR CI.** Enable the `mysql` input manually in CI,
-or set `MYSQL_TEST_HOST`, `MYSQL_TEST_PORT`, `MYSQL_TEST_USER`,
-`MYSQL_TEST_PASSWORD`, `MYSQL_TEST_DATABASE` and run `npm run test:integration`.
-The database name must start with `common_api_test`; tests create/remove a unique
-table and terminate only a connection they created. No live DB test was run during
-this update.
+CI covers Node 22.13.0, 24 and 26 on Linux and Windows. Database injection and
+shutdown tests use in-memory clients; no live database tests run here. Schema,
+migration and real Prisma/database integration tests belong to the service app.

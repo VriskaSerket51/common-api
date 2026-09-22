@@ -42,12 +42,13 @@ test('allow overlap runs both invocations and shutdown signals both', async () =
 });
 
 test('non-cooperative job times out without pretending it stopped or closing its database', async () => {
-  const runtime = createRuntime({ logging: { silent: true } });
+  let databaseClosed = false;
+  const runtime = createRuntime({ logging: { silent: true }, database: {},
+    disconnectDatabase: async () => { databaseClosed = true; },
+  });
   const app = await App.create({ runtime });
   const gate = Promise.withResolvers();
   const [job] = runtime.scheduler.initialize([{ name: 'stuck', cron: '0 0 1 1 *', job: () => gate.promise }]);
-  let databaseClosed = false;
-  runtime.database.closeDatabase = async () => { databaseClosed = true; };
   const running = job.invoke(new Date());
   try {
     await assert.rejects(app.shutdown({ timeoutMs: 20 }), error =>

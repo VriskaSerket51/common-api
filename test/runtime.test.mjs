@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
-import { test, mock } from 'node:test';
-import mysql from 'mysql2/promise';
+import { test } from 'node:test';
 import { App, createRuntime, createConfigStore, createLogger, initializeConfig, updateConfig } from '@ireves/common-api';
 
-const dbConfig = { host: 'localhost', port: 3306, user: 'test', password: '', database: 'test' };
 
 test('options-object apps snapshot legacy configuration into independent runtimes', async () => {
   initializeConfig({ jwtSecret: 'legacy-initial' });
@@ -21,13 +19,14 @@ test('options-object apps snapshot legacy configuration into independent runtime
   }
 });
 
-test('JWT-only and database-only stores validate only enabled features', () => {
+test('JWT configuration is independent from injected database clients', () => {
   const jwt = createConfigStore({ jwtSecret: 'jwt-only' });
   assert.equal(jwt.jwtSecret(), 'jwt-only');
-  assert.throws(jwt.database, /Database is not configured/);
-  const db = createConfigStore({ db: dbConfig });
-  assert.equal(db.database().database, 'test');
-  assert.throws(db.jwtSecret, /JWT is not configured/);
+  const runtime = createRuntime({ database: { user: {} } });
+  assert.deepEqual(runtime.database, { user: {} });
+  assert.throws(runtime.config.jwtSecret, /initializeConfig/);
+  const empty = createConfigStore({});
+  assert.throws(empty.jwtSecret, /JWT is not configured/);
 });
 
 test('independent apps use their own signing keys and request contexts', async () => {
@@ -55,32 +54,16 @@ test('independent apps use their own signing keys and request contexts', async (
   }
 });
 
-test('same database values and JWT-only updates keep the pool; separate runtimes get separate pools', async () => {
-  const factories = [];
-  const factory = mock.method(mysql, 'createPool', options => {
-    const fake = { async execute() { return [[{ database: options.database }], []]; }, async end() {} };
-    factories.push(fake);
-    return fake;
-  });
-  const log = createLogger({ silent: true });
-  const a = createRuntime({ config: { jwtSecret: 'first', db: dbConfig }, logger: log });
-  const b = createRuntime({ config: { db: { ...dbConfig, database: 'other' } }, logger: log });
-  try {
-    assert.equal((await a.database.getFirstAsync('select')).database, 'test');
-    a.config.initialize({ db: { ...dbConfig, connectionLimit: 10 }, jwtSecret: 'second' });
-    await a.database.getAllAsync('select');
-    a.config.update({ jwtSecret: 'third' });
-    await a.database.getAllAsync('select');
-    assert.equal(factories.length, 1);
-    assert.equal((await b.database.getFirstAsync('select')).database, 'other');
-    assert.equal(factories.length, 2);
-    a.config.update({ db: { ...dbConfig, database: 'changed' } });
-    await assert.rejects(a.database.getAllAsync('select'), /closeDatabase/);
-    assert.equal((await b.database.getFirstAsync('select')).database, 'other');
-  } finally {
-    await Promise.all([a.database.closeDatabase(), b.database.closeDatabase()]);
-    factory.mock.restore(); log.flush();
-  }
+test('injected clients retain identity and JWT rotation does not replace them', async () => {
+  const first = { user: { findMany: async () => [{ id: 1 }] } };
+  const second = { user: { findMany: async () => [{ id: 2 }] } };
+  const a = createRuntime({ config: { jwtSecret: 'first' }, database: first });
+  const b = createRuntime({ database: second });
+  a.config.update({ jwtSecret: 'rotated' });
+  assert.equal(a.database, first);
+  assert.equal(b.database, second);
+  assert.deepEqual(await a.database.user.findMany(), [{ id: 1 }]);
+  assert.deepEqual(await b.database.user.findMany(), [{ id: 2 }]);
 });
 
 test('HTTP deadline aborts request signals and closes connections', async () => {

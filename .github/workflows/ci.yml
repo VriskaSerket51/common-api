@@ -4,11 +4,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      mysql:
-        description: Run optional real MySQL integration tests
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -30,35 +25,3 @@ jobs:
       - run: npm ci
       # test:package runs typecheck and all unit tests through prepack.
       - run: npm run test:package
-
-  mysql:
-    if: github.event_name == 'workflow_dispatch' && inputs.mysql
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: integration-only
-          MYSQL_ROOT_HOST: '%'
-          MYSQL_DATABASE: common_api_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -pintegration-only"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=12
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: npm run test:integration
-        env:
-          MYSQL_TEST_HOST: 127.0.0.1
-          MYSQL_TEST_PORT: '3306'
-          MYSQL_TEST_USER: root
-          MYSQL_TEST_PASSWORD: integration-only
-          MYSQL_TEST_DATABASE: common_api_test

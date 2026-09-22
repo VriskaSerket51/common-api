@@ -1,7 +1,7 @@
 {
   "name": "@ireves/common-api",
   "version": "2.0.0",
-  "description": "Simple Backend framework with JWT and MySQL support.",
+  "description": "ESM backend framework with JWT, scheduling and typed database injection.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -14,7 +14,6 @@
     "test": "npm run build && node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run typecheck && npm test",
-    "test:integration": "npm run build && node --test test/integration/*.test.mjs",
     "test:package": "node scripts/check-package.mjs"
   },
   "repository": {
@@ -43,7 +42,6 @@
     "express": "^5.2.1",
     "helmet": "^8.3.0",
     "jose": "^6.2.12",
-    "mysql2": "^3.24.4",
     "pino": "^10.3.1",
     "croner": "^10.0.1"
   },

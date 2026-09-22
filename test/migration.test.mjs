@@ -10,7 +10,6 @@ import api, { App, createRouterByFiles } from '@ireves/common-api';
 
 api.initializeConfig({
   jwtSecret: 'migration-test-secret',
-  db: { host: 'localhost', port: 3306, user: 'test', password: '', database: 'test' },
 });
 after(() => api.logger.flush());
 

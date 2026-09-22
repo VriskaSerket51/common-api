@@ -64,18 +64,52 @@ instead of being silently ignored. Durations accept seconds or strings ending in
 forms. Explicit payload `exp`/`jti` values are preserved when the corresponding
 options are absent; specifying the same claim in both places rejects.
 
-- JWT and DB configuration are independently optional. Accessing a disabled feature
-  throws a descriptive error. No default signing key or database password is provided.
+- JWT configuration and database injection are independently optional. JWT use
+  without a configured key throws; an uninjected database is undefined.
 - `initializeConfig()`/`runtime.config.initialize()` replaces configuration.
   `updateConfig()`/`runtime.config.update()` merges a partial update.
-- Reapplying equal DB values or rotating only a JWT key preserves the pool. For
-  changed DB connection values, finish work and close the old pool first.
+- Database credentials and connection pools belong to the injected client.
+  Rotating JWT configuration does not replace that client.
 - Verified claims live in `res.locals.auth`. Optional authentication allows missing
   credentials, but rejects invalid credentials.
 - Routes with `permission` require a checker. Use the app's `permissionChecker`
   option, or `createRouterMiddlewares(checker, runtime.jwt)` for custom composition.
   Permission routes require access tokens. Numeric values have no implicit ordering.
 - Legacy `ResponseException` still uses HTTP 200 with an application status code.
+
+## Database ownership and Prisma
+
+The built-in mysql2 driver, lazy pool and SQL helper layer have been removed.
+The package does not require Prisma: inject your application's configured Prisma
+client (or another DB client) through `createRuntime({ database: prisma })`.
+Prisma schemas, generated artifacts, migrations, adapter configuration and client
+creation remain in the service repository; see the README injection example.
+
+| Removed API | Replacement |
+| --- | --- |
+| `Config.db`, `DatabaseConfig`, `validateDatabaseConfig`, `config.database()` | Configure the application's client directly. Legacy `config.db` now throws. |
+| `createDatabase`, `defaultDatabase`, `Database` | `createRuntime({ database: client })`; no global database. |
+| `query`, `execute`, `getAllAsync`, `getFirstAsync`, `runAsync` | Client model queries or its parameterized raw SQL API. |
+| `withTransaction`, `connection` | Client transaction API (Prisma `$transaction`); redesign direct-connection code. |
+| `database.closeDatabase`, module-level `closeDatabase` | `runtime.closeDatabase` with an explicit `disconnectDatabase` callback. |
+| `MySqlException` | Original client errors; optionally wrap in `Exception(message, { cause })`. |
+
+`runtime.database` is the original client, not a wrapper. Query result shapes,
+insert IDs and transaction connections are no longer mysql2 contracts. Update
+callers to use their ORM's results and transaction-scoped client.
+
+Use `disconnectDatabase: client => client.$disconnect()` to transfer disconnect
+responsibility to one runtime. Omit it for a shared client and close that client
+only after every application and background producer has stopped. Shutdown never
+auto-detects `$disconnect`. Successful disconnect is once per runtime; create a new
+runtime/client before restarting DB work. Rejected disconnects can be retried;
+timeouts/aborts do not cancel underlying work and later calls await the same work.
+A previously aborted signal prevents starting a disconnect. Client queries outside
+this framework are not tracked or blocked automatically.
+
+`Runtime<TClient>`, `RuntimeOptions<TClient>`, `App<TClient>` and
+`AppOptions<TClient>` preserve the supplied type. Without injection, the database
+is typed as undefined. Defaults/global compatibility runtimes hold no DB client.
 
 ## Shutdown and scheduled work
 
@@ -84,7 +118,7 @@ options are absent; specifying the same claim in both places rejects.
   deadline. Timeout/cancellation aborts request signals, closes connections and
   rejects; it does not claim request handlers have stopped.
 - `await app.shutdown({ timeoutMs, signal })` stops HTTP and scheduled jobs before
-  closing that runtime's pool, sharing a total 30-second default budget.
+  calling its opt-in database disconnect callback, sharing a total 30-second budget.
 - Jobs receive `{ signal, scheduledAt }`. Shutdown cancels future invocations and
   aborts active job signals. Jobs must cooperate to actually stop running.
 - A timed-out job leaves shutdown rejected and the database open. The scheduler
@@ -92,8 +126,7 @@ options are absent; specifying the same claim in both places rejects.
   JavaScript code is never forcibly terminated.
 - Overlap defaults to `overlap: 'skip'`. Select `'allow'` to preserve concurrent
   behavior. Names are unique within a scheduler, not across all runtimes.
-- SQL helpers use a lazy pool. Transactions must use their supplied connection.
-  Dedicated `connection()` callers still close their own connections with `end()`.
+- Transactions and direct connections are managed by your database client.
 
 ## Logging and packaging
 
@@ -119,9 +152,9 @@ forced shutdown. Logger lifecycle belongs to the application that supplied it.
 package documentation are shipped. `npm run test:package` checks the tarball and
 compiles/runs a typed ESM consumer against its contents.
 
-Real MySQL tests are optional and disabled for push/PR CI. Enable the `mysql`
-input manually in CI or run `npm run test:integration` against an explicitly
-configured disposable database. They were not run as part of this migration.
+Live MySQL tests and their CI service were removed along with the built-in driver.
+Injection/lifecycle tests run without a DB. Real integration and migration tests
+now belong to the service that owns the schema and client.
 
 ## Scheduler, routing and stricter types
 

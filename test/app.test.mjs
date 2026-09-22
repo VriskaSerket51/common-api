@@ -6,9 +6,7 @@ import {
   initializeConfig, defaultErrorHandler, logger,
 } from '@ireves/common-api';
 
-initializeConfig({ jwtSecret: 'app-test-secret', db: {
-  host: 'localhost', port: 3306, user: 'test', password: '', database: 'test',
-} });
+initializeConfig({ jwtSecret: 'app-test-secret' });
 after(() => logger.flush());
 
 test('options register routes, enforce auth before local middleware, and prioritize custom errors', async () => {

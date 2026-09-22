@@ -40,7 +40,7 @@ try {
     renameSync(path.join(extraction, 'package'), path.join(modules, 'common-api'));
     const consumer = path.join(extraction, 'consumer');
     writeFileSync(path.join(consumer, 'package.json'), '{"type":"module"}');
-    const sample = `import { App, type AppOptions, type ModelBase, type ScheduledJob } from '@ireves/common-api';
+    const sample = `import { App, createRuntime, type RuntimeOptions, type AppOptions, type ModelBase, type ScheduledJob } from '@ireves/common-api';
 const route: ModelBase = { method: 'get', path: '/', controller: (_req, res) => res.sendStatus(200) };
 const options: AppOptions = { routers: [{ path: '/', models: [route] }], config: { jwtSecret: 'package-test-key' } };
 const app = await App.create(options);
@@ -51,6 +51,36 @@ const jobs: ScheduledJob[] = app.runtime.scheduler.initialize([{ name: 'consumer
 if (jobs[0]?.name !== 'consumer') throw new Error('Scheduler consumer check failed');
 await app.shutdown();
 app.runtime.logger.flush();
+const noDatabase: undefined = app.runtime.database;
+let disconnected = 0;
+const client = {
+  user: { async findMany() { return [{ id: 1, email: 'typed@example.test' }]; } },
+  async $disconnect() { disconnected++; },
+};
+const runtimeOptions: RuntimeOptions<typeof client> = {
+  database: client, disconnectDatabase: db => db.$disconnect(),
+};
+const runtime = createRuntime(runtimeOptions);
+const typedOptions: AppOptions<typeof client> = { runtime };
+const typedApp = await App.create(typedOptions);
+const inferred = createRuntime({ database: client, disconnectDatabase: db => db.$disconnect() });
+const rows: { id: number; email: string }[] = await typedApp.runtime.database.user.findMany();
+if (rows[0]?.id !== 1 || inferred.database !== client) throw new Error('Database injection consumer check failed');
+function rejectInvalidTypes() {
+  // @ts-expect-error: missing models must remain type errors, not become any.
+  runtime.database.missingModel.findMany();
+  // @ts-expect-error: client types must survive App.create.
+  typedApp.runtime.database.user.nonexistentMethod();
+  // @ts-expect-error: a DB-typed app must receive a matching runtime.
+  const missingRuntime: AppOptions<typeof client> = {};
+  // @ts-expect-error: no global database exists for an unconfigured app.
+  app.runtime.database.user.findMany();
+  // @ts-expect-error: database configuration is owned by the application.
+  createRuntime({ config: { db: {} } });
+}
+await typedApp.shutdown();
+await typedApp.shutdown();
+if (disconnected !== 1) throw new Error('Database lifecycle consumer check failed');
 `;
     writeFileSync(path.join(consumer, 'index.ts'), sample);
     writeFileSync(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
