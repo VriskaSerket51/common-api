@@ -212,7 +212,37 @@ automatic failures are logged.
 
 Custom four-argument `errorHandlers` run before the fallback; call `next(error)`
 to delegate. Parser errors preserve HTTP 4xx, unexpected failures return 500.
-Legacy `ResponseException` retains HTTP 200 with an application status code.
+Extend `HttpException` for HTTP-aware application errors:
+
+```typescript
+import { HttpException } from '@ireves/common-api';
+
+class EmailTaken extends HttpException {
+  constructor() {
+    super(409, { code: 'EMAIL_TAKEN', message: 'Email is already in use.' });
+  }
+}
+// In an awaited controller/service path: throw new EmailTaken();
+```
+
+The fallback returns `{ error: { code, message }, requestId }` with the actual HTTP
+status. `code` is an application-owned string/number (default `HTTP_<status>`).
+Messages are public by default for 4xx and hidden for 5xx; use `expose` explicitly
+when needed. Stack, cause and arbitrary subclass properties are never serialized
+into the response. All fallback 5xx errors, including explicit HttpException
+instances, are logged with request context. `cause` stays available in logs.
+
+The library defines no business error catalog or Result type. Domain errors can
+extend ordinary Error and be mapped by the existing `errorHandlers` option;
+custom handlers run first and may use a completely different response format.
+Expected business outcomes may also be returned as values. Exceptions only unwind
+the awaited call chain; use client transactions for rollback and explicit
+cancellation for parallel work.
+
+`ResponseException` is deprecated and retains its legacy HTTP 200 response
+`{ status, message }`. Built-in JWT expiry/invalid-token responses currently keep
+that legacy contract. Use HttpException for new code, or map legacy errors in a
+custom handler when migrating an application's API.
 
 The default logger writes JSON to stdout. Error logs preserve stacks, causes and
 aggregate errors, along with request ID, method and path. `res.locals.log` carries

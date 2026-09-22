@@ -176,3 +176,21 @@ now belong to the service that owns the schema and client.
 - `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are enabled.
 - CI runs the package check once per matrix entry; its prepack hook still runs
   type checking and the complete unit suite before the consumer check.
+
+## Extensible HTTP errors
+
+- `HttpException(status, { code, message, cause, expose })` supports application
+  subclasses. Status must be an integer in 400..599. No business error classes
+  or mandatory Result abstraction are supplied by the framework.
+- Default HTTP errors now return JSON `{ error: { code, message }, requestId }`
+  instead of Express's text status body. HTTP status codes remain unchanged;
+  clients parsing error text must migrate. Default codes are `HTTP_<status>`.
+- 4xx messages are public by default; 5xx messages are generic unless explicitly
+  marked `expose: true`. Codes are public. Causes, stacks and arbitrary extra
+  fields stay out of responses. Every fallback 5xx is logged, including errors
+  explicitly thrown as HttpException. Parser error details are never exposed.
+- `ResponseException` is deprecated but keeps HTTP 200 and its old body. Existing
+  JWT expiry/invalid-token responses also retain that contract. Adopt HttpException
+  for new errors; use custom error middleware to migrate legacy responses.
+- `errorHandlers` continue to run first, so applications can map plain domain
+  errors or completely replace the wire format. Delegate with `next(error)`.
