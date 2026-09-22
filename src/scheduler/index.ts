@@ -1,5 +1,4 @@
-import scheduler from "node-schedule";
-import { randomUUID } from "node:crypto";
+import { Cron } from "croner";
 import { logger } from "../logger/index.js";
 import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "../shutdown.js";
 
@@ -13,17 +12,25 @@ export interface Schedule {
   overlap?: "skip" | "allow";
   job: (context: ScheduleContext) => void | Promise<void>;
 }
+/** Library-owned handle; no dependency-specific job objects escape the scheduler. */
+export interface ScheduledJob {
+  readonly name: string;
+  nextInvocation(): Date | null;
+  /** Cancels future invocations; active work is drained by shutdown(). */
+  cancel(): void;
+  /** Manual execution participates in overlap protection and shutdown tracking. */
+  invoke(scheduledAt?: Date): Promise<void>;
+}
 
 export const createScheduler = (log = logger) => {
-  const namespace = randomUUID();
-  const jobs = new Map<string, { job: scheduler.Job; active: number; disabled: boolean }>();
+  const jobs = new Map<string, { cron: Cron; handle: ScheduledJob; active: number; disabled: boolean }>();
   const running = new Map<Promise<void>, AbortController>();
   let stopping: Promise<void> | undefined;
 
-  const initialize = (schedules: readonly Schedule[]): scheduler.Job[] => {
+  const initialize = (schedules: readonly Schedule[]): ScheduledJob[] => {
     if (stopping) throw new Error("The scheduler is shutting down.");
     for (const [name, entry] of jobs) {
-      if (!entry.job.nextInvocation() && entry.active === 0) jobs.delete(name);
+      if (!entry.cron.nextRun() && entry.active === 0) { entry.disabled = true; jobs.delete(name); }
     }
     const names = new Set(jobs.keys());
     for (const schedule of schedules) {
@@ -38,36 +45,49 @@ export const createScheduler = (log = logger) => {
     const created: string[] = [];
     try {
       for (const schedule of schedules) {
-        const entry = { job: undefined as unknown as scheduler.Job, active: 0, disabled: false };
-        const job = scheduler.scheduleJob(namespace + ":" + schedule.name, schedule.cron, async (fireDate) => {
-          if (entry.disabled || (entry.active > 0 && schedule.overlap !== "allow")) return;
+        let cron: Cron;
+        try { cron = new Cron(schedule.cron, { paused: true }); }
+        catch (cause) { throw new Error("Invalid cron expression for schedule: " + schedule.name, { cause }); }
+        let expected = cron.nextRun();
+        if (!expected) { cron.stop(); throw new Error("Invalid cron expression or no future execution: " + schedule.name); }
+        const state = { active: 0, disabled: false };
+        const invoke = async (scheduledAt = new Date()): Promise<void> => {
+          if (state.disabled || (state.active > 0 && schedule.overlap !== "allow")) return;
+          const fireDate = new Date(scheduledAt);
+          if (!Number.isFinite(fireDate.getTime())) throw new TypeError("scheduledAt must be a valid date.");
           const now = new Date();
           if (now.getTime() - fireDate.getTime() >= 1000) {
             log.info(schedule.name + " was supposed to run at " + fireDate.toISOString()
               + ", but actually ran at " + now.toISOString());
           }
           const controller = new AbortController();
-          entry.active++;
-          const execution = Promise.resolve().then(() => schedule.job({
-            signal: controller.signal, scheduledAt: new Date(fireDate),
-          }));
+          state.active++;
+          const execution = Promise.resolve().then(() => schedule.job({ signal: controller.signal, scheduledAt: fireDate }));
           running.set(execution, controller);
-          try { await execution; } finally { running.delete(execution); entry.active--; }
+          try { await execution; }
+          catch (error) { log.error({ job: schedule.name, error }, "Scheduled job failed"); throw error; }
+          finally { running.delete(execution); state.active--; }
+        };
+        const handle: ScheduledJob = Object.freeze({
+          name: schedule.name,
+          nextInvocation: () => state.disabled ? null : cron.nextRun(),
+          cancel: () => { state.disabled = true; cron.stop(); },
+          invoke,
         });
-        if (!job) throw new Error("Invalid cron expression for schedule: " + schedule.name);
-        entry.job = job;
-        job.on("error", (error: unknown) => log.error({ job: schedule.name, error }, "Scheduled job failed"));
+        const entry = Object.assign(state, { cron, handle });
         jobs.set(schedule.name, entry);
         created.push(schedule.name);
+        cron.schedule(async () => {
+          const fireDate = expected ?? new Date();
+          expected = cron.nextRun();
+          // invoke logs failures; timer callbacks must not reject into the event loop.
+          try { await invoke(fireDate); } catch { /* already reported */ }
+        });
       }
-      return created.map(name => jobs.get(name)!.job);
+      for (const name of created) jobs.get(name)!.cron.resume();
+      return created.map(name => jobs.get(name)!.handle);
     } catch (error) {
-      for (const name of created) {
-        const entry = jobs.get(name)!;
-        entry.disabled = true;
-        entry.job.cancel();
-        jobs.delete(name);
-      }
+      for (const name of created) { jobs.get(name)!.handle.cancel(); jobs.delete(name); }
       throw error;
     }
   };
@@ -75,7 +95,7 @@ export const createScheduler = (log = logger) => {
   const shutdown = (options: ShutdownOptions = {}): Promise<void> => {
     validateShutdownOptions(options);
     if (!stopping) {
-      for (const entry of jobs.values()) { entry.disabled = true; entry.job.cancel(); }
+      for (const entry of jobs.values()) entry.handle.cancel();
       jobs.clear();
       for (const controller of running.values()) controller.abort(new Error("Scheduler is shutting down."));
       stopping = Promise.allSettled([...running.keys()]).then(() => {}).finally(() => { stopping = undefined; });

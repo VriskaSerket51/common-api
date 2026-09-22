@@ -40,20 +40,22 @@ try {
     renameSync(path.join(extraction, 'package'), path.join(modules, 'common-api'));
     const consumer = path.join(extraction, 'consumer');
     writeFileSync(path.join(consumer, 'package.json'), '{"type":"module"}');
-    const sample = `import { App, type AppOptions, type ModelBase } from '@ireves/common-api';
+    const sample = `import { App, type AppOptions, type ModelBase, type ScheduledJob } from '@ireves/common-api';
 const route: ModelBase = { method: 'get', path: '/', controller: (_req, res) => res.sendStatus(200) };
 const options: AppOptions = { routers: [{ path: '/', models: [route] }], config: { jwtSecret: 'package-test-key' } };
 const app = await App.create(options);
 const token = await app.runtime.jwt.createAccessToken({ sub: 'package-user' });
 const claims = await app.runtime.jwt.verifyJwt(token);
 if (claims.sub !== 'package-user') throw new Error('JWT consumer check failed');
+const jobs: ScheduledJob[] = app.runtime.scheduler.initialize([{ name: 'consumer', cron: '0 0 1 1 *', job: () => {} }]);
+if (jobs[0]?.name !== 'consumer') throw new Error('Scheduler consumer check failed');
 await app.shutdown();
 app.runtime.logger.flush();
 `;
     writeFileSync(path.join(consumer, 'index.ts'), sample);
     writeFileSync(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
       target: 'ES2023', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true,
-      skipLibCheck: true, outDir: './out', rootDir: '.',
+      skipLibCheck: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true, outDir: './out', rootDir: '.',
     }, include: ['index.ts'] }));
     execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '-p', path.join(consumer, 'tsconfig.json')], { stdio: 'pipe' });
     execFileSync(process.execPath, [path.join(consumer, 'out/index.js')], { stdio: 'pipe' });
