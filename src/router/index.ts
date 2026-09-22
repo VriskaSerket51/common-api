@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import { pathToFileURL } from "node:url";
-import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middlewares/index.js";
-import { readAllFilesAsync } from "../utils/index.js";
+import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middleware/index.js";
+import { readAllFilesAsync } from "../utils/files.js";
 
 export interface RouterDefinition {
   path: string;

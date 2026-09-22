@@ -11,7 +11,7 @@
   "scripts": {
     "build": "node scripts/clean.mjs && tsc",
     "dev": "tsx watch --include \"./src/**/*.ts\" ./src/index.ts",
-    "test": "npm run build && node --test test/*.test.mjs",
+    "test": "npm run build && node --test \"test/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run typecheck && npm test",
     "test:package": "node scripts/check-package.mjs"
@@ -55,32 +55,32 @@
       "import": "./dist/index.js"
     },
     "./app": {
-      "types": "./dist/app.d.ts",
-      "import": "./dist/app.js"
+      "types": "./dist/app/index.d.ts",
+      "import": "./dist/app/index.js"
     },
     "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "import": "./dist/runtime.js"
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
     },
     "./config": {
       "types": "./dist/config/index.d.ts",
       "import": "./dist/config/index.js"
     },
     "./errors": {
-      "types": "./dist/exceptions/index.d.ts",
-      "import": "./dist/exceptions/index.js"
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
     },
     "./logger": {
       "types": "./dist/logger/index.d.ts",
       "import": "./dist/logger/index.js"
     },
     "./jwt": {
-      "types": "./dist/middlewares/jwt.d.ts",
-      "import": "./dist/middlewares/jwt.js"
+      "types": "./dist/jwt/index.d.ts",
+      "import": "./dist/jwt/index.js"
     },
     "./middleware": {
-      "types": "./dist/middlewares/index.d.ts",
-      "import": "./dist/middlewares/index.js"
+      "types": "./dist/middleware/index.d.ts",
+      "import": "./dist/middleware/index.js"
     },
     "./router": {
       "types": "./dist/router/index.d.ts",

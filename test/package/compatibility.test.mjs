@@ -34,7 +34,7 @@ test('App.create rejects when a router module cannot be initialized', async () =
 
 test('tsx loads TypeScript file routers during development', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'common-api-ts-'));
-  const entry = new URL('../src/index.ts', import.meta.url).href;
+  const entry = new URL('../../src/index.ts', import.meta.url).href;
   try {
     writeFileSync(path.join(directory, 'package.json'), '{"type":"module"}');
     writeFileSync(path.join(directory, 'development.ts'), `
@@ -67,7 +67,7 @@ test('tsx loads TypeScript file routers during development', () => {
 
 test('file routers, JWTs and rejected async controllers work with Express 5', async () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'common-api test #-'));
-  const entry = new URL('../dist/index.js', import.meta.url).href;
+  const entry = new URL('../../dist/index.js', import.meta.url).href;
   writeFileSync(path.join(directory, 'package.json'), '{"type":"module"}');
   writeFileSync(path.join(directory, 'users.js'), `
     import { RouterBase, HttpException } from ${JSON.stringify(entry)};

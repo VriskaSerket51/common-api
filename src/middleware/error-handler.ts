@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { STATUS_CODES } from "node:http";
-import { HttpException, ResponseException } from "../exceptions/index.js";
+import { HttpException, ResponseException } from "../errors/index.js";
 import { logger } from "../logger/index.js";
 
 export const createErrorHandler = (log = logger): ErrorRequestHandler => (error: unknown, req, res, next) => {

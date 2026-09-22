@@ -7,7 +7,7 @@ import { App, readAllFilesAsync } from '@ireves/common-api';
 
 test('asynchronous discovery sorts nested paths and routes follow that precedence', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'common-api-order-'));
-  const entry = new URL('../dist/index.js', import.meta.url).href;
+  const entry = new URL('../../dist/index.js', import.meta.url).href;
   let app;
   try {
     await mkdir(path.join(directory, 'a'));

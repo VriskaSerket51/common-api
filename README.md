@@ -283,6 +283,35 @@ a Pino logger through `createRuntime({ logger })`. File rotation and retention
 belong to the application's log collector or transport. Flush logs with
 `logger.flush(callback)` before closing custom streams; never close stdout.
 
+## Repository layout
+
+```text
+src/
+  index.ts              # Package entry and legacy default namespace
+  public-api.ts         # Explicit root export contract
+  app/                  # Express app creation and HTTP lifecycle
+  runtime/              # Typed resource injection and shutdown utilities
+  config/               # JWT configuration store
+  errors/               # Extensible exception types
+  jwt/                  # Token signing, verification and authentication
+  middleware/           # Permission composition and error handling
+  router/               # Route definitions and module discovery
+  logger/               # Pino setup and error serialization
+  scheduler/            # Croner integration and job lifecycle
+  utils/                # File traversal helpers
+test/
+  app/ jwt/ middleware/ logger/ router/ runtime/ scheduler/
+  package/              # Public imports and compatibility checks
+  fixtures/             # Legacy token and typed package consumer
+scripts/                # Build cleanup and package verification
+```
+
+Feature directories match the public subpaths. Internal files use kebab-case;
+source imports point directly to their owning module rather than the root API.
+Tests follow the same feature grouping. The test command discovers nested
+`*.test.mjs` files; fixtures are not executed as tests. The package consumer fixture
+is compiled and run separately against the packed artifact.
+
 ## Development and verification
 
 ```sh

@@ -1,7 +1,7 @@
-import { createConfigStore, defaultConfigStore, type Config } from "./config/index.js";
-import { createJwt, defaultJwt } from "./middlewares/jwt.js";
-import { createScheduler, defaultScheduler } from "./scheduler/index.js";
-import { createLogger, logger, type LoggerOptions } from "./logger/index.js";
+import { createConfigStore, defaultConfigStore, type Config } from "../config/index.js";
+import { createJwt, defaultJwt } from "../jwt/index.js";
+import { createScheduler, defaultScheduler } from "../scheduler/index.js";
+import { createLogger, logger, type LoggerOptions } from "../logger/index.js";
 import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "./shutdown.js";
 import type { Logger } from "pino";
 

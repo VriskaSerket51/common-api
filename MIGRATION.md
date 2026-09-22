@@ -207,3 +207,9 @@ now belong to the service that owns the schema and client.
 - The root default namespace import remains available but is deprecated. Prefer
   named imports and `import type` for declarations. No wildcard deep imports or
   internal shutdown functions are exposed by the package export map.
+
+## Source layout
+
+Source and tests are grouped by feature. Public import specifiers are unchanged;
+only their dist targets changed. Internal paths are not public API. Test fixtures
+now live under test/fixtures, and npm test discovers nested test files.

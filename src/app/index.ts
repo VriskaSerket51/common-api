@@ -5,7 +5,7 @@ import type { Socket } from "node:net";
 import type { ListenOptions } from "node:net";
 import cors, { type CorsOptions } from "cors";
 import helmet from "helmet";
-import { createRouter, createRouterByFiles, type RouterDefinition } from "./router/index.js";
+import { createRouter, createRouterByFiles, type RouterDefinition } from "../router/index.js";
 import {
   createErrorHandler,
   createRouterMiddlewares,
@@ -14,12 +14,12 @@ import {
   type ErrorMiddleware,
   type Middleware,
   type RouterMiddleware,
-} from "./middlewares/index.js";
-import { createRuntime, defaultRuntime, type Runtime } from "./runtime.js";
-import type { Config } from "./config/index.js";
-import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "./shutdown.js";
+} from "../middleware/index.js";
+import { createRuntime, defaultRuntime, type Runtime } from "../runtime/index.js";
+import type { Config } from "../config/index.js";
+import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "../runtime/shutdown.js";
 import type { Logger } from "pino";
-import { HttpException } from "./exceptions/index.js";
+import { HttpException } from "../errors/index.js";
 
 declare global {
   namespace Express {
@@ -195,4 +195,4 @@ export class App<TDatabase = undefined> {
 }
 
 export default App;
-export type { ShutdownOptions } from "./shutdown.js";
+export type { ShutdownOptions } from "../runtime/shutdown.js";

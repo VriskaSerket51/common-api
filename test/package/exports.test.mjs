@@ -30,7 +30,7 @@ test('middleware exports do not implicitly forward JWT or internal shutdown help
 });
 
 test('undocumented internal and removed DB paths cannot be imported', async () => {
-  for (const path of ['dist/index.js', 'dist/shutdown.js', 'public-api', 'export', 'mysql']) {
+  for (const path of ['dist/index.js', 'dist/runtime/shutdown.js', 'public-api', 'export', 'mysql']) {
     await assert.rejects(import(`@ireves/common-api/${path}`), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   }
 });
