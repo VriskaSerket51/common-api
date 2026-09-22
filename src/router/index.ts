@@ -2,6 +2,19 @@ import { Router, type RequestHandler } from "express";
 import { pathToFileURL } from "node:url";
 import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middleware/index.js";
 import { readAllFilesAsync } from "../utils/files.js";
+import { defaultRuntime, type Runtime } from "../runtime/index.js";
+import { routeServices, type RouteServices } from "./services.js";
+export type { RouteServices } from "./services.js";
+
+export type RoutesFactory<TDatabase = undefined> =
+  (services: RouteServices<TDatabase>) => readonly RouterDefinition[] | Promise<readonly RouterDefinition[]>;
+
+const routesFactory = Symbol("common-api.routesFactory");
+
+/** Marks a default export for file discovery without executing unrelated functions. */
+export function defineRoutes<TDatabase = undefined>(factory: RoutesFactory<TDatabase>): RoutesFactory<TDatabase> {
+  return Object.assign(factory, { [routesFactory]: true });
+}
 
 export interface RouterDefinition {
   path: string;
@@ -30,7 +43,8 @@ export const createRouter = (
 
 export const createRouterByFiles = async (
   dirName: string,
-  modelMiddleware: RouterMiddleware = defaultRouterMiddlewares
+  modelMiddleware: RouterMiddleware = defaultRouterMiddlewares,
+  runtime: Runtime<unknown> = defaultRuntime,
 ): Promise<Router> => {
   const definitions: RouterDefinition[] = [];
 
@@ -47,6 +61,10 @@ export const createRouterByFiles = async (
 
   for (const fileName of fileNames) {
     const module = (await import(pathToFileURL(fileName).href)).default;
+    if (typeof module === "function" && module[routesFactory] === true) {
+      definitions.push(...await module(routeServices(runtime)));
+      continue;
+    }
     if (!module || !(module.prototype instanceof RouterBase)) {
       continue;
     }

@@ -166,10 +166,10 @@ const runtime = createRuntime({
 });
 const app = await App.create({
   runtime,
-  routers: [{ path: '/users', models: [{
+  routers: ({ database }) => [{ path: '/users', models: [{
     method: 'get', path: '/',
     controller: async (_req, res) => {
-      const users = await runtime.database.user.findMany({ select: { id: true } });
+      const users = await database.user.findMany({ select: { id: true } });
       res.json(users);
     },
   }] }],
@@ -184,6 +184,84 @@ framework neither wraps query errors nor changes transaction behavior. There is
 no global DB client. Without injection, `runtime.database` is `undefined`.
 `AppOptions<typeof prisma>` and `RuntimeOptions<typeof prisma>` preserve client
 types when storing options in variables.
+
+### Dependency injection into routes
+
+`routers` accepts an array or an async factory receiving the app's `RouteServices`. The
+factory runs once per `App.create`, so the same routes can use a production client
+or a test double without importing a global database or app. Its database type is
+inferred from `runtime`. Controllers close over those dependencies; no request cast
+or global Express type augmentation is needed.
+
+Services contain `database`, `jwt`, `logger`, `scheduler` and `config`, preserving
+their original identities. The shallow-frozen services object excludes
+`closeDatabase`; app startup and shutdown remain the entry point's responsibility.
+This is an API boundary, not a security sandbox: service APIs such as the database
+client's own `$disconnect()` are unchanged.
+
+Prefer explicit imports and factory composition, so TypeScript checks that each
+route receives the dependencies it needs. A route can declare only its required
+subset, allowing unit tests to supply only that subset:
+
+```typescript
+// routes/users.ts
+import type { RouteServices, RouterDefinition } from '@ireves/common-api';
+import type { prisma } from '../database.js';
+
+export const userRoutes = (
+  { database }: Pick<RouteServices<typeof prisma>, 'database'>,
+): readonly RouterDefinition[] => [{
+  path: '/users',
+  models: [{ method: 'get', path: '/', controller: async (_req, res) => {
+    res.json(await database.user.findMany());
+  } }],
+}];
+```
+
+```typescript
+// Application entry point, with runtime already configured:
+import { userRoutes } from './routes/users.js';
+import { authRoutes } from './routes/auth.js';
+
+const app = await App.create({
+  runtime,
+  routers: async services => [
+    ...userRoutes(services),
+    ...await authRoutes(services),
+  ],
+});
+```
+
+For optional file discovery, default-export a factory marked with `defineRoutes`:
+
+```typescript
+import { defineRoutes, type RouteServices } from '@ireves/common-api';
+import type { prisma } from '../database.js';
+
+export default defineRoutes(({ database }: RouteServices<typeof prisma>) => [{
+  path: '/users',
+  models: [{
+    method: 'get', path: '/', authType: 'access',
+    controller: async (_req, res) => {
+      const users = await database.user.findMany();
+      res.locals.log?.info({ count: users.length }, 'Listed users');
+      res.json(users);
+    },
+  }],
+}]);
+```
+
+`App.create({ runtime, routerDir })` supplies its services to every marked factory.
+File discovery happens at runtime, so the application must ensure the database
+type declared by each file matches the supplied client. Ordinary default-exported
+functions are ignored; existing `RouterBase` classes retain their behavior.
+
+The injected `jwt` signs tokens with the same service used by route authentication.
+`logger` is the app logger (use `res.locals.log` for request IDs), and `scheduler`
+is the instance drained by `app.shutdown()` before database disconnection. `config`
+is the app's configuration store. These dependencies therefore share the app's
+configuration and lifetime. Factories should define routes; start background work
+after `App.create` succeeds to avoid leaving work running after a startup failure.
 
 Omit `disconnectDatabase` for shared/external ownership: `shutdown()` will not
 close the client, even if it has `$disconnect()`. The application must disconnect

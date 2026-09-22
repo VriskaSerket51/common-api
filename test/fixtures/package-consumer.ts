@@ -6,7 +6,7 @@ import { HttpException, type HttpExceptionOptions } from '@ireves/common-api/err
 import { createLogger, type LoggerOptions } from '@ireves/common-api/logger';
 import { createJwt, type JwtSignOptions } from '@ireves/common-api/jwt';
 import { createRouterMiddlewares, type ErrorMiddleware } from '@ireves/common-api/middleware';
-import { createRouter, type ModelBase } from '@ireves/common-api/router';
+import { createRouter, defineRoutes, type ModelBase, type RoutesFactory, type RouteServices } from '@ireves/common-api/router';
 import { createScheduler, type ScheduledJob } from '@ireves/common-api/scheduler';
 import { readAllFilesAsync } from '@ireves/common-api/utils';
 const config: Config = { jwtSecret: 'consumer-key' };
@@ -46,6 +46,32 @@ const runtime = createRuntime(runtimeOptions);
 const typedOptions: AppOptions<typeof client> = { runtime };
 const typedApp = await App.create(typedOptions);
 const inferred = createRuntime({ database: client, disconnectDatabase: db => db.$disconnect() });
+const routes: RoutesFactory<typeof client> = defineRoutes(({ database }) => [{
+  path: '/users', models: [{ method: 'get', path: '/', controller: async (_req, res) => {
+    const users: { id: number; email: string }[] = await database.user.findMany();
+    res.json(users);
+  } }],
+}]);
+const factoryApp = await App.create({ runtime, routers: routes });
+const contextualApp = await App.create({ runtime, routers: context => {
+  const db: typeof client = context.database;
+  if (false) {
+    // @ts-expect-error: contextual inference must not erase database types.
+    context.database.missingModel.findMany();
+    // @ts-expect-error: lifecycle belongs to the app, not route dependencies.
+    context.closeDatabase();
+    // @ts-expect-error: service references cannot be reassigned by a route.
+    context.database = client;
+  }
+  return [];
+} });
+const databaseOnly = ({ database }: Pick<RouteServices<typeof client>, 'database'>): readonly rootApi.RouterDefinition[] => [{
+  path: '/minimal', models: [{ method: 'get', path: '/', controller: async (_req, res) => res.json(await database.user.findMany()) }],
+}];
+const composedApp = await App.create({ runtime, routers: async services => [
+  ...await routes(services), ...databaseOnly(services),
+] });
+databaseOnly({ database: client }); // No App or JWT service required for a unit test.
 const rows: { id: number; email: string }[] = await typedApp.runtime.database.user.findMany();
 if (rows[0]?.id !== 1 || inferred.database !== client) throw new Error('Database injection consumer check failed');
 function rejectInvalidTypes() {

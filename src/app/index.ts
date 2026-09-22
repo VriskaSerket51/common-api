@@ -5,7 +5,8 @@ import type { Socket } from "node:net";
 import type { ListenOptions } from "node:net";
 import cors, { type CorsOptions } from "cors";
 import helmet from "helmet";
-import { createRouter, createRouterByFiles, type RouterDefinition } from "../router/index.js";
+import { createRouter, createRouterByFiles, type RouterDefinition, type RoutesFactory } from "../router/index.js";
+import { routeServices } from "../router/services.js";
 import {
   createErrorHandler,
   createRouterMiddlewares,
@@ -35,14 +36,15 @@ interface AppBaseOptions {
   config?: Config;
   permissionChecker?: PermissionChecker;
   routerDir?: string;
-  routers?: readonly RouterDefinition[];
   middlewares?: readonly Middleware[];
   routerMiddleware?: RouterMiddleware;
   errorHandlers?: readonly ErrorMiddleware[];
   cors?: CorsOptions | false;
 }
 
-export type AppOptions<TDatabase = undefined> = AppBaseOptions & (
+export type AppOptions<TDatabase = undefined> = AppBaseOptions & {
+  routers?: readonly RouterDefinition[] | RoutesFactory<TDatabase>;
+} & (
   [TDatabase] extends [undefined] ? { runtime?: Runtime<TDatabase> } : { runtime: Runtime<TDatabase> }
 );
 
@@ -80,8 +82,10 @@ export class App<TDatabase = undefined> {
     routerMiddleware: RouterMiddleware,
     errorHandlers: ErrorMiddleware[],
   ): Promise<App>;
+  // The overloads preserve each caller's database type; only the implementation
+  // erases it so heterogeneous factory signatures can share this code path.
   static async create(
-    optionsOrDirectory: (AppBaseOptions & { runtime?: Runtime<unknown> }) | string = {},
+    optionsOrDirectory: (AppBaseOptions & { runtime?: Runtime<unknown>; routers?: readonly RouterDefinition[] | RoutesFactory<any> }) | string = {},
     middlewares: Middleware[] = [],
     routerMiddleware: RouterMiddleware = defaultRouterMiddlewares,
     errorHandlers: ErrorMiddleware[] = [],
@@ -94,7 +98,9 @@ export class App<TDatabase = undefined> {
     const runtime = options.runtime ?? createRuntime(config === undefined ? {} : { config });
     const app = new App(options, runtime);
     const routeMiddleware = options.routerMiddleware ?? createRouterMiddlewares(options.permissionChecker, app.runtime.jwt);
-    app.expressApp.use(createRouter(options.routers ?? [], routeMiddleware));
+    const routers = typeof options.routers === "function"
+      ? await options.routers(routeServices(runtime)) : options.routers ?? [];
+    app.expressApp.use(createRouter(routers, routeMiddleware));
     if (options.routerDir) await app.initRouters(options.routerDir, routeMiddleware);
     app.initErrorHandlers(options.errorHandlers ?? []);
     return app;
@@ -184,7 +190,7 @@ export class App<TDatabase = undefined> {
   }
 
   async initRouters(routerDir: string, routerMiddleware: RouterMiddleware) {
-    this.expressApp.use(await createRouterByFiles(routerDir, routerMiddleware));
+    this.expressApp.use(await createRouterByFiles(routerDir, routerMiddleware, this.runtime));
   }
 
   initErrorHandlers(errorHandlers: readonly ErrorMiddleware[]) {

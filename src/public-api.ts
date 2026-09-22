@@ -23,8 +23,8 @@ export type { AuthPayload, JwtService, JwtSignOptions, JwtVerifyOptions } from "
 export { createRouterMiddlewares, defaultRouterMiddlewares, createErrorHandler, defaultErrorHandler } from "./middleware/index.js";
 export type { Middleware, ErrorMiddleware, RouterMiddleware, PermissionChecker } from "./middleware/index.js";
 
-export { createRouter, createRouterByFiles, RouterBase } from "./router/index.js";
-export type { RouterDefinition, ModelBase, RouteDefinition } from "./router/index.js";
+export { createRouter, createRouterByFiles, RouterBase, defineRoutes } from "./router/index.js";
+export type { RouterDefinition, ModelBase, RouteDefinition, RoutesFactory, RouteServices } from "./router/index.js";
 
 export { createScheduler, defaultScheduler, initializeScheduler, shutdownScheduler } from "./scheduler/index.js";
 export type { ScheduleContext, Schedule, ScheduledJob, Scheduler } from "./scheduler/index.js";
