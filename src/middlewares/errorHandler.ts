@@ -2,7 +2,7 @@ import type { ErrorRequestHandler } from "express";
 import { HttpException, ResponseException } from "../exceptions/index.js";
 import { logger } from "../logger/index.js";
 
-const defaultErrorHandler: ErrorRequestHandler = (error: unknown, _req, res, next) => {
+export const createErrorHandler = (log = logger): ErrorRequestHandler => (error: unknown, _req, res, next) => {
   if (res.headersSent) {
     next(error);
     return;
@@ -22,8 +22,8 @@ const defaultErrorHandler: ErrorRequestHandler = (error: unknown, _req, res, nex
     res.sendStatus(status);
     return;
   }
-  logger.error(error);
+  log.error("Request failed", { error, requestId: res.locals.requestId, method: _req.method, path: _req.path });
   res.sendStatus(500);
 };
 
-export default defaultErrorHandler;
+export default createErrorHandler();

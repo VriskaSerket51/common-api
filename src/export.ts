@@ -9,3 +9,5 @@ export * from "./utils/index.js";
 
 export { default as App } from "./app.js";
 export type { AppOptions } from "./app.js";
+export * from "./runtime.js";
+export type { ShutdownOptions } from "./shutdown.js";

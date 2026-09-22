@@ -1,19 +1,40 @@
 import express from "express";
 import type { Server } from "node:http";
+import { randomUUID } from "node:crypto";
+import type { Socket } from "node:net";
 import type { ListenOptions } from "node:net";
 import cors, { type CorsOptions } from "cors";
 import helmet from "helmet";
 import { createRouter, createRouterByFiles, type RouterDefinition } from "./router/index.js";
 import {
-  defaultErrorHandler,
+  createErrorHandler,
+  createRouterMiddlewares,
+  type PermissionChecker,
   defaultRouterMiddlewares,
   type ErrorMiddleware,
   type Middleware,
   type RouterMiddleware,
 } from "./middlewares/index.js";
+import { createRuntime, defaultRuntime, type Runtime } from "./runtime.js";
+import type { Config } from "./config/index.js";
+import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "./shutdown.js";
+import type { Logger } from "winston";
 import { HttpException } from "./exceptions/index.js";
 
+declare global {
+  namespace Express {
+    interface Locals {
+      requestId?: string;
+      log?: Logger;
+      signal?: AbortSignal;
+    }
+  }
+}
+
 export interface AppOptions {
+  config?: Config;
+  runtime?: Runtime;
+  permissionChecker?: PermissionChecker;
   routerDir?: string;
   routers?: readonly RouterDefinition[];
   middlewares?: readonly Middleware[];
@@ -24,12 +45,27 @@ export interface AppOptions {
 
 export default class App {
   readonly expressApp: express.Application;
+  readonly runtime: Runtime;
+  private abortController = new AbortController();
+  private sockets = new Set<Socket>();
   private server?: Server;
   private starting?: Promise<Server>;
   private closing?: Promise<void>;
 
   private constructor(options: AppOptions) {
+    if (options.runtime && options.config) throw new Error("Pass runtime or config, not both.");
+    this.runtime = options.runtime ?? createRuntime({ config: options.config ?? defaultRuntime.config.snapshot() });
     this.expressApp = express();
+    this.expressApp.use((_req, res, next) => {
+      const requestId = randomUUID();
+      const disconnected = new AbortController();
+      res.locals.requestId = requestId;
+      res.locals.log = this.runtime.logger.child({ requestId });
+      res.locals.signal = AbortSignal.any([this.abortController.signal, disconnected.signal]);
+      res.setHeader("X-Request-Id", requestId);
+      res.once("close", () => { if (!res.writableFinished) disconnected.abort(); });
+      next();
+    });
     this.initMiddlewares(options.middlewares ?? [], options.cors);
   }
 
@@ -48,10 +84,10 @@ export default class App {
     errorHandlers: ErrorMiddleware[] = [],
   ): Promise<App> {
     const options: AppOptions = typeof optionsOrDirectory === "string"
-      ? { routerDir: optionsOrDirectory, middlewares, routerMiddleware, errorHandlers }
+      ? { routerDir: optionsOrDirectory, middlewares, routerMiddleware, errorHandlers, runtime: defaultRuntime }
       : optionsOrDirectory;
     const app = new App(options);
-    const routeMiddleware = options.routerMiddleware ?? defaultRouterMiddlewares;
+    const routeMiddleware = options.routerMiddleware ?? createRouterMiddlewares(options.permissionChecker, app.runtime.jwt);
     app.expressApp.use(createRouter(options.routers ?? [], routeMiddleware));
     if (options.routerDir) await app.initRouters(options.routerDir, routeMiddleware);
     app.initErrorHandlers(options.errorHandlers ?? []);
@@ -62,6 +98,7 @@ export default class App {
     if (this.server || this.starting || this.closing) {
       throw new Error("The application is already starting, listening, or closing.");
     }
+    this.abortController = new AbortController();
     this.starting = new Promise<Server>((resolve, reject) => {
       const server = this.expressApp.listen(
         typeof options === "number" ? { port: options } : options,
@@ -75,6 +112,10 @@ export default class App {
         },
       );
       this.server = server;
+      server.on("connection", socket => {
+        this.sockets.add(socket);
+        socket.once("close", () => this.sockets.delete(socket));
+      });
       server.once("close", () => {
         if (this.server === server) this.server = undefined;
       });
@@ -86,29 +127,41 @@ export default class App {
     }
   }
 
-  async close(): Promise<void> {
-    if (this.closing) return this.closing;
-    this.closing = (async () => {
-      if (this.starting) {
-        try { await this.starting; } catch { return; }
-      }
-      const server = this.server;
-      if (!server) return;
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error && (error as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING") {
-            reject(error);
-          } else {
-            resolve();
-          }
+  close(options: ShutdownOptions = {}): Promise<void> {
+    validateShutdownOptions(options);
+    if (!this.closing) {
+      this.closing = (async () => {
+        if (this.starting) {
+          try { await this.starting; } catch { return; }
+        }
+        const server = this.server;
+        if (!server) return;
+        await new Promise<void>((resolve, reject) => {
+          server.close(error => {
+            if (error && (error as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING") reject(error);
+            else resolve();
+          });
         });
-      });
-    })();
-    try {
-      await this.closing;
-    } finally {
-      this.closing = undefined;
+      })().finally(() => { this.closing = undefined; });
     }
+    return waitForShutdown(this.closing, options, reason => {
+      this.abortController.abort(reason);
+      this.server?.closeAllConnections();
+      for (const socket of this.sockets) socket.destroy();
+    });
+  }
+
+  /** Stops producers before closing this runtime's database; defaults to a 30s total budget. */
+  async shutdown(options: ShutdownOptions = {}): Promise<void> {
+    validateShutdownOptions(options);
+    const started = Date.now();
+    const remaining = () => ({ ...options, timeoutMs: Math.max(0, (options.timeoutMs ?? 30_000) - (Date.now() - started)) });
+    const results = await Promise.allSettled([
+      this.close(remaining()), this.runtime.scheduler.shutdown(remaining()),
+    ]);
+    const errors = results.filter(result => result.status === "rejected").map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, "Shutdown did not finish; database remains open for active work.");
+    await this.runtime.database.closeDatabase(remaining());
   }
 
   /** @deprecated Use await app.listen(port) instead. */
@@ -131,6 +184,6 @@ export default class App {
   initErrorHandlers(errorHandlers: readonly ErrorMiddleware[]) {
     this.expressApp.use((_req, _res, next) => next(new HttpException(404)));
     if (errorHandlers.length) this.expressApp.use(...errorHandlers);
-    this.expressApp.use(defaultErrorHandler);
+    this.expressApp.use(createErrorHandler(this.runtime.logger));
   }
 }

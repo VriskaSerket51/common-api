@@ -1,17 +1,18 @@
 export class Exception extends Error {
   public message: string;
 
-  constructor(message: string = "") {
-    super(message);
+  constructor(message: string = "", options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
     this.message = message;
   }
 }
 
 export class MySqlException extends Exception {
-  public error: any;
+  public error: unknown;
 
-  constructor(error: any) {
-    super("My SQL Error");
+  constructor(error: unknown) {
+    super("My SQL Error", { cause: error });
     this.error = error;
   }
 }
@@ -28,8 +29,8 @@ export class HttpException extends Exception {
 export class ResponseException extends Exception {
   public status: number;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(status: number, message: string, options?: ErrorOptions) {
+    super(message, options);
     this.status = status;
   }
 }

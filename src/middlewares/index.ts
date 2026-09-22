@@ -2,8 +2,7 @@ import type { RequestHandler, ErrorRequestHandler, Request, Response } from "exp
 import { HttpException } from "../exceptions/index.js";
 import type { ModelBase } from "../router/index.js";
 import {
-  verifyAccessTokenMiddleware,
-  verifyRefreshTokenMiddleware,
+  defaultJwt, type JwtService,
 } from "./jwt.js";
 
 export type RouterMiddleware = (model: ModelBase) => readonly Middleware[];
@@ -11,12 +10,13 @@ export type RouterMiddleware = (model: ModelBase) => readonly Middleware[];
 export type Middleware = RequestHandler;
 export type ErrorMiddleware = ErrorRequestHandler;
 
-export { default as defaultErrorHandler } from "./errorHandler.js";
+export { default as defaultErrorHandler, createErrorHandler } from "./errorHandler.js";
 export * from "./jwt.js";
 
 export type PermissionChecker = (permission: number, req: Request, res: Response) => boolean | Promise<boolean>;
 
-export const createRouterMiddlewares = (checkPermission?: PermissionChecker): RouterMiddleware => (model) => {
+export const createRouterMiddlewares = (checkPermission?: PermissionChecker, auth: JwtService = defaultJwt): RouterMiddleware => (model) => {
+  const { verifyAccessTokenMiddleware, verifyRefreshTokenMiddleware } = auth;
   const { authType } = model;
   const middlewares: Middleware[] = [];
   if (model.permission !== undefined) {
@@ -40,7 +40,7 @@ export const createRouterMiddlewares = (checkPermission?: PermissionChecker): Ro
       break;
     case "optional":
       middlewares.push((req, res, next) => {
-        verifyAccessTokenMiddleware(req, res, next, false);
+        return verifyAccessTokenMiddleware(req, res, next, false);
       });
       break;
     default:
