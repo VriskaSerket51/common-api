@@ -40,7 +40,31 @@ try {
     renameSync(path.join(extraction, 'package'), path.join(modules, 'common-api'));
     const consumer = path.join(extraction, 'consumer');
     writeFileSync(path.join(consumer, 'package.json'), '{"type":"module"}');
-    const sample = `import { App, createRuntime, type RuntimeOptions, type AppOptions, type ModelBase, type ScheduledJob } from '@ireves/common-api';
+    const sample = `import legacy, * as rootApi from '@ireves/common-api';
+import { App, type AppOptions, type ShutdownOptions } from '@ireves/common-api/app';
+import { createRuntime, type RuntimeOptions } from '@ireves/common-api/runtime';
+import { createConfigStore, type Config } from '@ireves/common-api/config';
+import { HttpException, type HttpExceptionOptions } from '@ireves/common-api/errors';
+import { createLogger, type LoggerOptions } from '@ireves/common-api/logger';
+import { createJwt, type JwtSignOptions } from '@ireves/common-api/jwt';
+import { createRouterMiddlewares, type ErrorMiddleware } from '@ireves/common-api/middleware';
+import { createRouter, type ModelBase } from '@ireves/common-api/router';
+import { createScheduler, type ScheduledJob } from '@ireves/common-api/scheduler';
+import { readAllFilesAsync } from '@ireves/common-api/utils';
+const config: Config = { jwtSecret: 'consumer-key' };
+const logOptions: LoggerOptions = { silent: true };
+const signOptions: JwtSignOptions = { expiresIn: '1m' };
+const errorOptions: HttpExceptionOptions = { code: 'CONSUMER', message: 'Consumer error' };
+const shutdownOptions: ShutdownOptions = { timeoutMs: 1000 };
+const errorMiddleware: ErrorMiddleware = (error, _req, _res, next) => next(error);
+if (legacy.App !== App || rootApi.HttpException !== HttpException) throw new Error('Export identity mismatch');
+const featureLogger = createLogger(logOptions);
+const featureJwt = createJwt(createConfigStore(config).jwtSecret);
+await featureJwt.verifyJwt(await featureJwt.createAccessToken({}, signOptions));
+createRouter([], createRouterMiddlewares(undefined, featureJwt));
+await createScheduler(featureLogger).shutdown(shutdownOptions);
+if (!(new HttpException(409, errorOptions) instanceof rootApi.HttpException)) throw new Error('Error identity mismatch');
+if (typeof readAllFilesAsync !== 'function') throw new Error('Missing utils export');
 const route: ModelBase = { method: 'get', path: '/', controller: (_req, res) => res.sendStatus(200) };
 const options: AppOptions = { routers: [{ path: '/', models: [route] }], config: { jwtSecret: 'package-test-key' } };
 const app = await App.create(options);
@@ -91,6 +115,11 @@ if (disconnected !== 1) throw new Error('Database lifecycle consumer check faile
     execFileSync(process.execPath, [path.join(consumer, 'out/index.js')], { stdio: 'pipe' });
     const manifest = JSON.parse(readFileSync(path.join(modules, 'common-api', 'package.json'), 'utf8'));
     assert.equal(manifest.type, 'module');
+    for (const entry of Object.values(manifest.exports)) {
+      for (const target of [entry.types, entry.import]) {
+        assert.ok(info.files.some(file => file.path === target.replace(/^\.\//, '')), 'Missing export target: ' + target);
+      }
+    }
     console.log(`Verified ${info.filename}: ${info.files.length} allowed files and a typed ESM consumer.`);
   } finally { rmSync(extraction, { recursive: true, force: true }); }
 } finally { rmSync(directory, { recursive: true, force: true }); }

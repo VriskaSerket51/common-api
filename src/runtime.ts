@@ -69,3 +69,5 @@ export const defaultRuntime: Runtime = {
     if (options.signal?.aborted) throw new Error("Shutdown was aborted.", { cause: options.signal.reason });
   },
 };
+
+export type { ShutdownOptions } from "./shutdown.js";

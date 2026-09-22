@@ -109,3 +109,5 @@ export type Scheduler = ReturnType<typeof createScheduler>;
 export const defaultScheduler = createScheduler();
 export const initializeScheduler = defaultScheduler.initialize;
 export const shutdownScheduler = defaultScheduler.shutdown;
+
+export type { ShutdownOptions } from "../shutdown.js";

@@ -10,6 +10,36 @@ npm install @ireves/common-api
 
 Set `"type": "module"` in your application.
 
+## Imports
+
+Prefer named imports from the root or a documented feature path:
+
+```typescript
+import { App, createRuntime } from '@ireves/common-api';
+import { HttpException, type HttpExceptionOptions } from '@ireves/common-api/errors';
+import { createJwt } from '@ireves/common-api/jwt';
+```
+
+| Path suffix | Public API |
+| --- | --- |
+| `/app` | App, AppOptions, ShutdownOptions |
+| `/runtime` | Runtime creation, types and compatibility runtime |
+| `/config` | Configuration store and JWT configuration helpers |
+| `/errors` | Exception classes and HttpExceptionOptions |
+| `/logger` | Logger factory, error serialization and types |
+| `/jwt` | Token creation, verification and auth middleware |
+| `/middleware` | Router middleware composition and error handlers |
+| `/router` | Router factories and route definitions |
+| `/scheduler` | Scheduler factory, job handles and lifecycle types |
+| `/utils` | File discovery helpers |
+
+The root explicitly lists its public symbols; implementation-only exports are not
+forwarded automatically. Root and feature paths reference the same implementations
+and compatibility instances. Feature paths avoid loading unrelated root exports,
+though their own dependencies still load. Do not import `dist/*` or source paths.
+The legacy default namespace import remains supported but is deprecated. Types
+should use `import type`; new code should use named imports.
+
 ## Create an app
 
 ```typescript

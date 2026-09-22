@@ -11,7 +11,6 @@ export type Middleware = RequestHandler;
 export type ErrorMiddleware = ErrorRequestHandler;
 
 export { default as defaultErrorHandler, createErrorHandler } from "./errorHandler.js";
-export * from "./jwt.js";
 
 export type PermissionChecker = (permission: number, req: Request, res: Response) => boolean | Promise<boolean>;
 

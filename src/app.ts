@@ -46,7 +46,7 @@ export type AppOptions<TDatabase = undefined> = AppBaseOptions & (
   [TDatabase] extends [undefined] ? { runtime?: Runtime<TDatabase> } : { runtime: Runtime<TDatabase> }
 );
 
-export default class App<TDatabase = undefined> {
+export class App<TDatabase = undefined> {
   readonly expressApp: express.Application;
   readonly runtime: Runtime<TDatabase>;
   private abortController = new AbortController();
@@ -193,3 +193,6 @@ export default class App<TDatabase = undefined> {
     this.expressApp.use(createErrorHandler(this.runtime.logger));
   }
 }
+
+export default App;
+export type { ShutdownOptions } from "./shutdown.js";

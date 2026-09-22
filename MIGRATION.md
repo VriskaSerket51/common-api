@@ -194,3 +194,16 @@ now belong to the service that owns the schema and client.
   for new errors; use custom error middleware to migrate legacy responses.
 - `errorHandlers` continue to run first, so applications can map plain domain
   errors or completely replace the wire format. Delegate with `next(error)`.
+
+## Public exports
+
+- Root named imports remain supported, with an explicit public API list.
+- Feature paths are now supported: `/app`, `/runtime`, `/config`, `/errors`,
+  `/logger`, `/jwt`, `/middleware`, `/router`, `/scheduler`, and `/utils`.
+  For example, import HttpException from `@ireves/common-api/errors` using a named
+  import. Root and feature exports share class and singleton identity.
+- JWT exports belong to `/jwt`, not `/middleware`. Existing root JWT imports
+  still work. The middleware path exposes composition and error handling only.
+- The root default namespace import remains available but is deprecated. Prefer
+  named imports and `import type` for declarations. No wildcard deep imports or
+  internal shutdown functions are exposed by the package export map.
