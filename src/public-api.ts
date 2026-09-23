@@ -1,32 +1,34 @@
 // The root public contract: implementation exports are never forwarded implicitly.
-export { App } from "./app/index.js";
-export type { AppOptions } from "./app/index.js";
-export { createRuntime, defaultRuntime } from "./runtime/index.js";
-export type { Runtime, RuntimeOptions } from "./runtime/index.js";
-export type { ShutdownOptions } from "./runtime/shutdown.js";
+export { App } from "#app/app/index";
+export type { AppOptions } from "#app/app/index";
+export { createRuntime, defaultRuntime } from "#app/runtime/index";
+export type { Runtime, RuntimeOptions } from "#app/runtime/index";
+export type { ShutdownOptions } from "#app/runtime/shutdown";
 
-export { createConfigStore, defaultConfigStore, initializeConfig, getConfig, updateConfig } from "./config/index.js";
-export type { Config, ConfigSnapshot, ConfigStore } from "./config/index.js";
+export { createConfigStore, defaultConfigStore, initializeConfig, getConfig, updateConfig } from "#app/config/index";
+export type { Config, ConfigSnapshot, ConfigStore } from "#app/config/index";
 
-export { Exception, HttpException, ResponseException } from "./errors/index.js";
-export type { HttpExceptionOptions } from "./errors/index.js";
+export { Exception, HttpException, ResponseException } from "#app/errors/index";
+export type { HttpExceptionOptions } from "#app/errors/index";
 
-export { createLogger, logger, serializeError } from "./logger/index.js";
-export type { Logger, LoggerOptions } from "./logger/index.js";
+export { createLogger, logger, serializeError } from "#app/logger/index";
+export type { Logger, LoggerOptions } from "#app/logger/index";
 
 export {
   createJwt, defaultJwt, createAccessToken, createRefreshToken, verifyJwt,
   verifyAccessTokenMiddleware, verifyRefreshTokenMiddleware,
-} from "./jwt/index.js";
-export type { AuthPayload, JwtService, JwtSignOptions, JwtVerifyOptions } from "./jwt/index.js";
+} from "#app/jwt/index";
+export type { AuthPayload, JwtService, JwtSignOptions, JwtVerifyOptions } from "#app/jwt/index";
 
-export { createRouterMiddlewares, defaultRouterMiddlewares, createErrorHandler, defaultErrorHandler } from "./middleware/index.js";
-export type { Middleware, ErrorMiddleware, RouterMiddleware, PermissionChecker } from "./middleware/index.js";
+export { createRouterMiddlewares, defaultRouterMiddlewares, createErrorHandler, defaultErrorHandler } from "#app/middleware/index";
+export type { Middleware, ErrorMiddleware, RouterMiddleware, PermissionChecker } from "#app/middleware/index";
 
-export { createRouter, createRouterByFiles, RouterBase, defineRoutes } from "./router/index.js";
-export type { RouterDefinition, ModelBase, RouteDefinition, RoutesFactory, RouteServices } from "./router/index.js";
+export { createRouter, createRouterByFiles, RouterBase, defineRoutes } from "#app/router/index";
+export type { RouterDefinition, ModelBase, RouteDefinition, RoutesFactory, RouteServices } from "#app/router/index";
+export { collectEndpointContracts, createEndpointRoutes, loadEndpoints } from "#app/router/index";
+export type { EndpointContract, Endpoint, EndpointDiscoveryOptions } from "#app/router/index";
 
-export { createScheduler, defaultScheduler, initializeScheduler, shutdownScheduler } from "./scheduler/index.js";
-export type { ScheduleContext, Schedule, ScheduledJob, Scheduler } from "./scheduler/index.js";
+export { createScheduler, defaultScheduler, initializeScheduler, shutdownScheduler } from "#app/scheduler/index";
+export type { ScheduleContext, Schedule, ScheduledJob, Scheduler } from "#app/scheduler/index";
 
-export { readAllFiles, readAllFilesAsync } from "./utils/index.js";
+export { readAllFiles, readAllFilesAsync } from "#app/utils/index";

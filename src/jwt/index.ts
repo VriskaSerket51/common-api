@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify, errors, type JWTPayload, type JWTVerifyOptions } from "jose";
 import type { Response, Request, NextFunction } from "express";
-import { defaultConfigStore } from "../config/index.js";
-import { HttpException, ResponseException } from "../errors/index.js";
+import { defaultConfigStore } from "#app/config/index";
+import { HttpException, ResponseException } from "#app/errors/index";
 import { randomUUID } from "node:crypto";
 
 export interface AuthPayload extends JWTPayload {

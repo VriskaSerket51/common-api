@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { STATUS_CODES } from "node:http";
-import { HttpException, ResponseException } from "../errors/index.js";
-import { logger } from "../logger/index.js";
+import { HttpException, ResponseException } from "#app/errors/index";
+import { logger } from "#app/logger/index";
 
 export const createErrorHandler = (log = logger): ErrorRequestHandler => (error: unknown, req, res, next) => {
   if (res.headersSent) {

@@ -9,6 +9,21 @@ import { createRouterMiddlewares, type ErrorMiddleware } from '@ireves/common-ap
 import { createRouter, defineRoutes, type ModelBase, type RoutesFactory, type RouteServices } from '@ireves/common-api/router';
 import { createScheduler, type ScheduledJob } from '@ireves/common-api/scheduler';
 import { readAllFilesAsync } from '@ireves/common-api/utils';
+import { collectEndpointContracts, createEndpointRoutes, loadEndpoints, type Endpoint } from '@ireves/common-api/router';
+
+const endpoints = [{ operationId: 'read', method: 'get', path: '/labels/{id}',
+  metadata: { summary: 'Read label' },
+  handle(_req, res, context) { res.json({ label: context.label }); },
+}] satisfies readonly Endpoint<{ label: string }, { summary: string }>[];
+const summary: string = collectEndpointContracts(endpoints)[0]!.metadata!.summary;
+createEndpointRoutes(endpoints, { label: summary });
+if (rootApi.createEndpointRoutes !== createEndpointRoutes || typeof loadEndpoints !== 'function') throw new Error('Endpoint export mismatch');
+if (false) {
+  // @ts-expect-error Handlers must be functions, not method-name strings.
+  const invalid: Endpoint = { operationId: 'bad', method: 'get', path: '/', handle: 'read' };
+  // @ts-expect-error Application context must retain its required fields.
+  createEndpointRoutes(endpoints, { wrong: true });
+}
 const config: Config = { jwtSecret: 'consumer-key' };
 const logOptions: LoggerOptions = { silent: true };
 const signOptions: JwtSignOptions = { expiresIn: '1m' };

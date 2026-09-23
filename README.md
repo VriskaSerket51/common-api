@@ -4,6 +4,14 @@ An ESM TypeScript backend library with Express 5, JWT, typed database injection 
 jobs. Requires **Node.js 22.13.0+**. See [MIGRATION.md](./MIGRATION.md) when upgrading
 from 1.x.
 
+Internal imports use `#app/*`, defined by `package.json#imports`. Normal Node.js
+execution resolves to `dist/*.js`, and package consumers resolve declarations
+to `dist/*.d.ts`. `npm run dev` and the repository TypeScript configuration use
+the private `common-api-source` condition to resolve `src/*.ts`. This avoids
+conflicting with a consuming application's `source` condition or its own
+`#app/*` aliases. No `tsconfig.paths` or post-build import rewriting is needed.
+Consumers should keep importing the documented `@ireves/common-api` exports.
+
 ```sh
 npm install @ireves/common-api
 ```
@@ -406,3 +414,58 @@ are shipped. Package checks extract the tarball and compile/run a typed ESM cons
 CI covers Node 22.13.0, 24 and 26 on Linux and Windows. Database injection and
 shutdown tests use in-memory clients; no live database tests run here. Schema,
 migration and real Prisma/database integration tests belong to the service app.
+## Endpoint declarations and automatic discovery
+
+An endpoint is a plain object: path, options, metadata, and a request handler.
+No controller class, factory, method-name string, or registration wrapper is needed.
+
+```ts
+// endpoints/users.endpoint.ts
+import type { Endpoint, RouteServices } from '@ireves/common-api/router';
+import type { Database } from '../database.js';
+
+export default [{
+  operationId: 'getUser', method: 'get', path: '/users/{id}',
+  authType: 'access', metadata: { summary: 'Get one user' },
+  async handle(req, res, { database }) {
+    res.json(await database.user.findUnique({ where: { id: Number(req.params.id) } }));
+  },
+}] satisfies readonly Endpoint<RouteServices<Database>>[];
+```
+
+```ts
+import { App } from '@ireves/common-api';
+import { loadEndpoints, createEndpointRoutes, type RouteServices } from '@ireves/common-api/router';
+import type { Database } from './database.js';
+
+const endpoints = await loadEndpoints<RouteServices<Database>>(
+  new URL('./endpoints/', import.meta.url),
+  { extension: import.meta.url.endsWith('.ts') ? '.ts' : '.js' },
+);
+const app = await App.create({
+  runtime, // Your existing Runtime<Database>.
+  routers: services => createEndpointRoutes(endpoints, services),
+});
+```
+
+Pass explicitly imported arrays directly to createEndpointRoutes if file discovery
+is unnecessary. Context can be any typed object, including shared domain services;
+handlers receive it as their third argument and Express next as the fourth.
+Handlers should use that context for app-specific state, not module-level mutable variables.
+
+collectEndpointContracts(endpoints) strips handlers and returns validated metadata
+for your document generator. Zod and OpenAPI remain application choices; common-api
+neither validates bodies nor generates the document. Discovery and collection import
+endpoint files but never execute request handlers. Keep module initialization free of
+DB connections or other runtime side effects.
+
+The loader reads immediate *.endpoint.js files in filename order. Select .mjs, .ts,
+or .mts explicitly when needed. Restart after adding files; ship the compiled endpoint
+directory. It rejects empty directories, invalid declarations, duplicate IDs/routes,
+and invalid authentication settings. Dynamic imports cannot check context types across
+files; explicit imports provide that additional compile-time check.
+
+Paths use literal segments and whole-segment {parameter} placeholders. Specific routes
+must precede overlapping parameter routes. Permissions require authType: 'access' and
+the usual permission checker. Existing RouterBase, defineRoutes, routerDir and explicit
+router arrays are unchanged; use loadEndpoints with routers for this new format.

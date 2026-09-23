@@ -1,8 +1,8 @@
-import { createConfigStore, defaultConfigStore, type Config } from "../config/index.js";
-import { createJwt, defaultJwt } from "../jwt/index.js";
-import { createScheduler, defaultScheduler } from "../scheduler/index.js";
-import { createLogger, logger, type LoggerOptions } from "../logger/index.js";
-import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "./shutdown.js";
+import { createConfigStore, defaultConfigStore, type Config } from "#app/config/index";
+import { createJwt, defaultJwt } from "#app/jwt/index";
+import { createScheduler, defaultScheduler } from "#app/scheduler/index";
+import { createLogger, logger, type LoggerOptions } from "#app/logger/index";
+import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "#app/runtime/shutdown";
 import type { Logger } from "pino";
 
 interface RuntimeBaseOptions {
@@ -70,4 +70,4 @@ export const defaultRuntime: Runtime = {
   },
 };
 
-export type { ShutdownOptions } from "./shutdown.js";
+export type { ShutdownOptions } from "#app/runtime/shutdown";

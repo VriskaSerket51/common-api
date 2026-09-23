@@ -1,1 +1,1 @@
-export { readAllFiles, readAllFilesAsync } from "./files.js";
+export { readAllFiles, readAllFilesAsync } from "#app/utils/files";

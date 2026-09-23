@@ -1,4 +1,4 @@
-import type { Runtime } from "../runtime/index.js";
+import type { Runtime } from "#app/runtime/index";
 
 /** App-scoped dependencies available while constructing routes. */
 export type RouteServices<TDatabase = undefined> = Pick<Runtime<TDatabase>,

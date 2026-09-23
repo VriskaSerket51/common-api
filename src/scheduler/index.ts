@@ -1,6 +1,6 @@
 import { Cron } from "croner";
-import { logger } from "../logger/index.js";
-import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "../runtime/shutdown.js";
+import { logger } from "#app/logger/index";
+import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "#app/runtime/shutdown";
 
 export interface ScheduleContext {
   signal: AbortSignal;
@@ -110,4 +110,4 @@ export const defaultScheduler = createScheduler();
 export const initializeScheduler = defaultScheduler.initialize;
 export const shutdownScheduler = defaultScheduler.shutdown;
 
-export type { ShutdownOptions } from "../runtime/shutdown.js";
+export type { ShutdownOptions } from "#app/runtime/shutdown";

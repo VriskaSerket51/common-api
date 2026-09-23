@@ -1,10 +1,14 @@
 import { Router, type RequestHandler } from "express";
 import { pathToFileURL } from "node:url";
-import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "../middleware/index.js";
-import { readAllFilesAsync } from "../utils/files.js";
-import { defaultRuntime, type Runtime } from "../runtime/index.js";
-import { routeServices, type RouteServices } from "./services.js";
-export type { RouteServices } from "./services.js";
+import { defaultRouterMiddlewares, type RouterMiddleware, type Middleware } from "#app/middleware/index";
+import { readAllFilesAsync } from "#app/utils/files";
+import { defaultRuntime, type Runtime } from "#app/runtime/index";
+import { routeServices, type RouteServices } from "#app/router/services";
+export type { RouteServices } from "#app/router/services";
+export { collectEndpointContracts, createEndpointRoutes } from "#app/router/endpoints";
+export type { EndpointContract, Endpoint } from "#app/router/endpoints";
+export { loadEndpoints } from "#app/router/endpoint-discovery";
+export type { EndpointDiscoveryOptions } from "#app/router/endpoint-discovery";
 
 export type RoutesFactory<TDatabase = undefined> =
   (services: RouteServices<TDatabase>) => readonly RouterDefinition[] | Promise<readonly RouterDefinition[]>;

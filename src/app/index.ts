@@ -5,8 +5,8 @@ import type { Socket } from "node:net";
 import type { ListenOptions } from "node:net";
 import cors, { type CorsOptions } from "cors";
 import helmet from "helmet";
-import { createRouter, createRouterByFiles, type RouterDefinition, type RoutesFactory } from "../router/index.js";
-import { routeServices } from "../router/services.js";
+import { createRouter, createRouterByFiles, type RouterDefinition, type RoutesFactory } from "#app/router/index";
+import { routeServices } from "#app/router/services";
 import {
   createErrorHandler,
   createRouterMiddlewares,
@@ -15,12 +15,12 @@ import {
   type ErrorMiddleware,
   type Middleware,
   type RouterMiddleware,
-} from "../middleware/index.js";
-import { createRuntime, defaultRuntime, type Runtime } from "../runtime/index.js";
-import type { Config } from "../config/index.js";
-import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "../runtime/shutdown.js";
+} from "#app/middleware/index";
+import { createRuntime, defaultRuntime, type Runtime } from "#app/runtime/index";
+import type { Config } from "#app/config/index";
+import { waitForShutdown, validateShutdownOptions, type ShutdownOptions } from "#app/runtime/shutdown";
 import type { Logger } from "pino";
-import { HttpException } from "../errors/index.js";
+import { HttpException } from "#app/errors/index";
 
 declare global {
   namespace Express {
@@ -201,4 +201,4 @@ export class App<TDatabase = undefined> {
 }
 
 export default App;
-export type { ShutdownOptions } from "../runtime/shutdown.js";
+export type { ShutdownOptions } from "#app/runtime/shutdown";

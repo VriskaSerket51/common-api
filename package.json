@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "node scripts/clean.mjs && tsc",
-    "dev": "tsx watch --include \"./src/**/*.ts\" ./src/index.ts",
+    "dev": "tsx watch --conditions=common-api-source --include \"./src/**/*.ts\" ./src/index.ts",
     "test": "npm run build && node --test \"test/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run typecheck && npm test",
@@ -98,5 +98,12 @@
   "files": [
     "dist",
     "MIGRATION.md"
-  ]
+  ],
+  "imports": {
+    "#app/*": {
+      "common-api-source": "./src/*.ts",
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  }
 }

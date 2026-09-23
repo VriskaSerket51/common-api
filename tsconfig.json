@@ -20,7 +20,10 @@
     "noEmitOnError": true,
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "customConditions": [
+      "common-api-source"
+    ]
   },
   "include": [
     "src/**/*.ts"

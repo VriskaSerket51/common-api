@@ -1,16 +1,16 @@
 import type { RequestHandler, ErrorRequestHandler, Request, Response } from "express";
-import { HttpException } from "../errors/index.js";
-import type { ModelBase } from "../router/index.js";
+import { HttpException } from "#app/errors/index";
+import type { ModelBase } from "#app/router/index";
 import {
   defaultJwt, type JwtService,
-} from "../jwt/index.js";
+} from "#app/jwt/index";
 
 export type RouterMiddleware = (model: ModelBase) => readonly Middleware[];
 
 export type Middleware = RequestHandler;
 export type ErrorMiddleware = ErrorRequestHandler;
 
-export { default as defaultErrorHandler, createErrorHandler } from "./error-handler.js";
+export { default as defaultErrorHandler, createErrorHandler } from "#app/middleware/error-handler";
 
 export type PermissionChecker = (permission: number, req: Request, res: Response) => boolean | Promise<boolean>;
 
