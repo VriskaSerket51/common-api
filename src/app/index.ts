@@ -177,8 +177,8 @@ export class App<TDatabase = undefined> {
   }
 
   /** @deprecated Use await app.listen(port) instead. */
-  run(port: number, onSuccessed: () => void, onFailed: (error: Error) => void): void {
-    void this.listen(port).then(onSuccessed, onFailed);
+  run(port: number, onSuccess: () => void, onFailure: (error: Error) => void): void {
+    void this.listen(port).then(onSuccess, onFailure);
   }
 
   initMiddlewares(middlewares: readonly Middleware[], corsOptions?: CorsOptions | false) {

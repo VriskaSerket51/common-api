@@ -50,7 +50,7 @@ Update code that expects mysql2 result tuples. Pass `disconnectDatabase` only if
 
 Use `HttpException(status, { code, message, cause, expose })` for HTTP errors. The body is `{ error: { code, message }, requestId }`. 4xx messages are shown by default; 5xx messages are hidden. Custom `errorHandlers` run first.
 
-`ResponseException` still returns HTTP 200 with `{ status, message }`. The JWT middleware here also keeps the `-100`/`-101` responses.
+`ResponseException` still returns HTTP 200 with `{ status, message }`. JWT errors return HTTP 401 with `TOKEN_EXPIRED` or `TOKEN_INVALID`.
 
 Logging uses Pino. Change `log.info('Message', { data })` to `log.info({ data }, 'Message')`. Replace `logDir` and Winston transports with a stream or Pino logger. Flush custom loggers before closing their streams; do not close stdout.
 

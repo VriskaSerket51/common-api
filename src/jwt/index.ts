@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify, errors, type JWTPayload, type JWTVerifyOptions } from "jose";
 import type { Response, Request, NextFunction } from "express";
 import { defaultConfigStore } from "#app/config/index";
-import { HttpException, ResponseException } from "#app/errors/index";
+import { HttpException } from "#app/errors/index";
 import { randomUUID } from "node:crypto";
 
 export interface AuthPayload extends JWTPayload {
@@ -113,12 +113,12 @@ export const createJwt = (resolveSecret: () => string) => {
     try {
       decoded = await verifyJwt(match[1]);
     } catch (error) {
-      if (error instanceof errors.JWTExpired) next(new ResponseException(-100, "토큰이 만료됐습니다."));
-      else if (error instanceof errors.JOSEError) next(new ResponseException(-101, "토큰이 유효하지 않습니다."));
+      if (error instanceof errors.JWTExpired) next(new HttpException(401, { code: "TOKEN_EXPIRED", message: "토큰이 만료됐습니다." }));
+      else if (error instanceof errors.JOSEError) next(new HttpException(401, { code: "TOKEN_INVALID", message: "토큰이 유효하지 않습니다." }));
       else next(error);
       return;
     }
-    if (decoded.type !== type) { next(new ResponseException(-101, "토큰이 유효하지 않습니다.")); return; }
+    if (decoded.type !== type) { next(new HttpException(401, { code: "TOKEN_INVALID", message: "토큰이 유효하지 않습니다." })); return; }
     res.locals.auth = decoded as AuthPayload;
     next();
   };

@@ -60,10 +60,11 @@ test('verified identity, permissions and invalid optional credentials are enforc
     assert.deepEqual(await (await request('/optional')).json(), { sub: null });
     assert.equal((await request('/optional', 'Basic invalid')).status, 401);
     for (const [token, expected] of [
-      ['invalid', -101], [await createRefreshToken({}), -101], [await createAccessToken({}, { expiresIn: 0 }), -100],
+      ['invalid', 'TOKEN_INVALID'], [await createRefreshToken({}), 'TOKEN_INVALID'], [await createAccessToken({}, { expiresIn: 0 }), 'TOKEN_EXPIRED'],
     ]) {
-      const result = await (await request('/optional', `Bearer ${token}`)).json();
-      assert.equal(result.status, expected);
+      const response = await request('/optional', `Bearer ${token}`);
+      assert.equal(response.status, 401);
+      assert.equal((await response.json()).error.code, expected);
     }
   } finally { await app.close(); }
 });

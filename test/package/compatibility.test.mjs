@@ -107,7 +107,7 @@ test('file routers, JWTs and rejected async controllers work with Express 5', as
     })).json(), { ok: true });
     assert.equal((await (await fetch(`${base}/users/me`, {
       headers: { Authorization: `Bearer ${refresh}` },
-    })).json()).status, -101);
+    })).json()).error.code, 'TOKEN_INVALID');
     assert.equal((await fetch(`${base}/users/refresh`, {
       method: 'POST', headers: { Authorization: `Bearer ${refresh}` },
     })).status, 204);
@@ -120,7 +120,7 @@ test('file routers, JWTs and rejected async controllers work with Express 5', as
   }
 });
 
-test('App.run reports occupied ports only through onFailed', { timeout: 5000 }, async () => {
+test('App.run reports occupied ports only through onFailure', { timeout: 5000 }, async () => {
   const occupied = http.createServer();
   occupied.listen(0);
   await once(occupied, 'listening');
@@ -141,7 +141,7 @@ test('App.run reports occupied ports only through onFailed', { timeout: 5000 }, 
   }
 });
 
-test('App.run calls onSuccessed when the server is listening', { timeout: 5000 }, async () => {
+test('App.run calls onSuccess when the server is listening', { timeout: 5000 }, async () => {
   const app = await api.App.create('', [], api.defaultRouterMiddlewares, []);
   const listen = app.expressApp.listen.bind(app.expressApp);
   let server;

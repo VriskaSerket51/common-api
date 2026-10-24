@@ -45,7 +45,7 @@ test('independent apps use their own signing keys and request contexts', async (
     const payload = await response.json();
     assert.equal(payload.sub, 'a-user');
     assert.equal(payload.requestId, response.headers.get('x-request-id'));
-    assert.equal((await (await request(servers[1])).json()).status, -101);
+    assert.equal((await (await request(servers[1])).json()).error.code, 'TOKEN_INVALID');
     runtimeB.config.update({ jwtSecret: 'app-b-rotated' });
     assert.equal(runtimeA.config.jwtSecret(), 'app-a');
   } finally {
